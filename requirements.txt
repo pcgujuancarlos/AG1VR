@@ -3,7 +3,6 @@ yfinance==0.2.54
 pandas==2.2.2
 numpy==1.26.4
 plotly==5.24.1
-pyarrow==17.0.0
-requests==2.32.3
-urllib3==2.2.3
-python-dotenv==1.0.0
+pytz
+requests>=2.31.0
+python-dotenv>=1.0.0
