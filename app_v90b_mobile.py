@@ -954,8 +954,8 @@ def main():
         with col_stat5:
             prob_promedio = sum([r['Probabilidad'] for r in resultados]) / len(resultados)
             st.metric("Prob. Promedio", f"{prob_promedio:.1f}%")
-        else:
-            st.info("ℹ️ No se detectaron señales para la fecha seleccionada")
+    else:
+        st.info("ℹ️ No se detectaron señales para la fecha seleccionada")
 
 if __name__ == "__main__":
     main()
