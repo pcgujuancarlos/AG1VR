@@ -215,8 +215,16 @@ def analizar_senal(ticker, fecha_analisis, usar_rsi, usar_bb, threshold):
     if df is None or len(df) == 0:
         return None
     
-    target_time = fecha_analisis.replace(hour=10, minute=0, second=0, microsecond=0)
-    target_time = ny_tz.localize(target_time)
+    # FIX: Crear el target_time sin timezone primero, luego localizarlo
+    target_time = datetime.combine(fecha_analisis.date(), datetime.min.time())
+    target_time = target_time.replace(hour=10, minute=0, second=0, microsecond=0)
+    
+    # Verificar si ya tiene timezone antes de localizar
+    if target_time.tzinfo is None:
+        target_time = ny_tz.localize(target_time)
+    else:
+        target_time = target_time.astimezone(ny_tz)
+    
     df_hasta_10am = df[df['datetime'] <= target_time].copy()
     
     if len(df_hasta_10am) < 20:
