@@ -217,12 +217,13 @@ def calcular_fecha_vencimiento(fecha_senal, ticker):
         return fecha_venc
 
 def buscar_contratos_disponibles(client, ticker, fecha_vencimiento):
-    """Busca contratos PUT disponibles en Polygon"""
+    """Busca contratos PUT disponibles en Polygon con búsqueda agresiva"""
     try:
         fecha_venc_str = fecha_vencimiento.strftime('%Y-%m-%d')
         import requests
         url = f"https://api.polygon.io/v3/reference/options/contracts"
         
+        # INTENTO 1: Buscar en la fecha exacta
         params = {
             'underlying_ticker': ticker,
             'contract_type': 'put',
@@ -239,10 +240,13 @@ def buscar_contratos_disponibles(client, ticker, fecha_vencimiento):
                 print(f"✅ Encontrados {len(data['results'])} contratos para {fecha_venc_str}")
                 return data['results']
         
-        print(f"⚠️  No hay contratos para {fecha_venc_str}, buscando en rango cercano (±30 días)...")
+        print(f"⚠️  No hay contratos para {fecha_venc_str}")
         
-        fecha_desde = (fecha_vencimiento - timedelta(days=30)).strftime('%Y-%m-%d')
-        fecha_hasta = (fecha_vencimiento + timedelta(days=30)).strftime('%Y-%m-%d')
+        # INTENTO 2: Buscar en rango ±7 días (más agresivo)
+        fecha_desde = (fecha_vencimiento - timedelta(days=7)).strftime('%Y-%m-%d')
+        fecha_hasta = (fecha_vencimiento + timedelta(days=7)).strftime('%Y-%m-%d')
+        
+        print(f"🔄 Buscando en rango: {fecha_desde} a {fecha_hasta}")
         
         params = {
             'underlying_ticker': ticker,
@@ -258,13 +262,37 @@ def buscar_contratos_disponibles(client, ticker, fecha_vencimiento):
         if response.status_code == 200:
             data = response.json()
             if 'results' in data and len(data['results']) > 0:
-                print(f"✅ Encontrados {len(data['results'])} contratos en rango cercano")
+                print(f"✅ Encontrados {len(data['results'])} contratos en rango ±7 días")
                 return data['results']
         
+        # INTENTO 3: Buscar en rango ±30 días (muy agresivo - último recurso)
+        fecha_desde = (fecha_vencimiento - timedelta(days=30)).strftime('%Y-%m-%d')
+        fecha_hasta = (fecha_vencimiento + timedelta(days=30)).strftime('%Y-%m-%d')
+        
+        print(f"🔄 Último intento - buscando en rango: {fecha_desde} a {fecha_hasta}")
+        
+        params = {
+            'underlying_ticker': ticker,
+            'contract_type': 'put',
+            'expiration_date.gte': fecha_desde,
+            'expiration_date.lte': fecha_hasta,
+            'limit': 1000,
+            'apiKey': API_KEY
+        }
+        
+        response = requests.get(url, params=params)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if 'results' in data and len(data['results']) > 0:
+                print(f"⚠️  Encontrados {len(data['results'])} contratos en rango ±30 días (lejos del objetivo)")
+                return data['results']
+        
+        print(f"❌ NO SE ENCONTRARON CONTRATOS para {ticker} en ningún rango")
         return []
         
     except Exception as e:
-        print(f"Error buscando contratos: {str(e)}")
+        print(f"❌ ERROR buscando contratos: {str(e)}")
         return []
 
 def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
@@ -410,20 +438,65 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                     'close': agg.close
                 })
             
-            prima_entrada = precios_dia1[0]['open']
+            # MEJORADO: Buscar prima óptima (dentro de rango o la más cercana)
+            prima_entrada = None
             prima_maxima_dia1 = max([p['high'] for p in precios_dia1])
             
-            print(f"Prima apertura: ${prima_entrada:.2f}")
             print(f"Rango objetivo: ${rango['min']:.2f} - ${rango['max']:.2f}")
+            print(f"Prima apertura (primera vela): ${precios_dia1[0]['open']:.2f}")
             
-            # Buscar prima dentro del rango si la apertura no lo está
-            if prima_entrada < rango['min'] or prima_entrada > rango['max']:
-                print("Prima fuera de rango - buscando momento correcto...")
-                for p in precios_dia1:
-                    if rango['min'] <= p['open'] <= rango['max']:
-                        prima_entrada = p['open']
-                        print(f"✅ Prima en rango encontrada: ${prima_entrada:.2f}")
-                        break
+            # 1. Intentar encontrar prima DENTRO del rango
+            primas_en_rango = []
+            for p in precios_dia1:
+                if rango['min'] <= p['open'] <= rango['max']:
+                    primas_en_rango.append(p['open'])
+            
+            if primas_en_rango:
+                prima_entrada = primas_en_rango[0]
+                print(f"✅ Prima EN RANGO encontrada: ${prima_entrada:.2f}")
+            else:
+                # 2. Si no hay primas en rango, buscar la MÁS CERCANA
+                print("⚠️  No hay primas en rango exacto - buscando la más cercana...")
+                
+                todas_primas = [p['open'] for p in precios_dia1]
+                rango_medio = (rango['min'] + rango['max']) / 2
+                
+                # Encontrar la prima más cercana al centro del rango
+                prima_mas_cercana = min(todas_primas, key=lambda x: abs(x - rango_medio))
+                
+                # CRÍTICO: Solo aceptar si está dentro de 50% del rango
+                diferencia_permitida = (rango['max'] - rango['min']) * 1.5
+                
+                if abs(prima_mas_cercana - rango_medio) <= diferencia_permitida:
+                    prima_entrada = prima_mas_cercana
+                    print(f"✅ Prima MÁS CERCANA aceptada: ${prima_entrada:.2f} (diferencia: ${abs(prima_entrada - rango_medio):.2f})")
+                else:
+                    print(f"❌ Prima más cercana (${prima_mas_cercana:.2f}) está DEMASIADO LEJOS del rango - rechazada")
+                    return {
+                        'ganancia_pct': 0,
+                        'ganancia_dia_siguiente': 0,
+                        'exito': '❌',
+                        'exito_dia2': '❌',
+                        'strike': strike_real,
+                        'prima_entrada': 0,
+                        'prima_maxima': 0,
+                        'prima_maxima_dia2': 0,
+                        'mensaje': f'Prima fuera de rango: ${prima_mas_cercana:.2f} (esperado: ${rango["min"]:.2f}-${rango["max"]:.2f})'
+                    }
+            
+            if prima_entrada is None or prima_entrada == 0:
+                print("❌ No se pudo determinar prima de entrada válida")
+                return {
+                    'ganancia_pct': 0,
+                    'ganancia_dia_siguiente': 0,
+                    'exito': '❌',
+                    'exito_dia2': '❌',
+                    'strike': strike_real,
+                    'prima_entrada': 0,
+                    'prima_maxima': 0,
+                    'prima_maxima_dia2': 0,
+                    'mensaje': 'No se encontró prima válida'
+                }
             
             print(f"\n📊 CÁLCULO DÍA 1:")
             print(f"  Prima entrada: ${prima_entrada:.2f}")
@@ -735,6 +808,44 @@ def main():
         
         if st.button("🔄 Cargar Histórico (4 meses)", help="Analiza los últimos 4 meses y guarda todos los D1"):
             cargar_historico_4_meses(client, analisis, tickers)
+        
+        # BOTÓN PARA DESCARGAR BASE DE DATOS
+        st.divider()
+        st.subheader("💾 Gestión de Datos")
+        
+        if num_registros > 0:
+            # Preparar JSON para descarga
+            json_data = json.dumps(analisis.resultados_historicos, indent=2, ensure_ascii=False)
+            
+            st.download_button(
+                label="📥 Descargar Base de Datos",
+                data=json_data,
+                file_name=f"resultados_historicos_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json",
+                use_container_width=True,
+                help="Descarga todos los resultados guardados en formato JSON"
+            )
+        
+        # BOTÓN PARA BORRAR BASE DE DATOS
+        st.caption("⚠️ Usa esto solo si hay datos corruptos")
+        if st.button("🗑️ Borrar Base de Datos", type="secondary", use_container_width=True, help="Elimina todos los datos y empieza limpio"):
+            if st.session_state.get('confirmar_borrar', False):
+                try:
+                    if os.path.exists("historial_operaciones.json"):
+                        os.remove("historial_operaciones.json")
+                    if os.path.exists("resultados_historicos.json"):
+                        os.remove("resultados_historicos.json")
+                    st.success("✅ Base de datos borrada completamente")
+                    st.info("🔄 Recargando página...")
+                    time.sleep(2)
+                    st.session_state.confirmar_borrar = False
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Error: {e}")
+            else:
+                st.session_state.confirmar_borrar = True
+                st.warning("⚠️ Click de nuevo para CONFIRMAR el borrado")
+                st.rerun()
     
     fecha_desde = (fecha_seleccionada - timedelta(days=30)).strftime('%Y-%m-%d')
     fecha_hasta = fecha_seleccionada.strftime('%Y-%m-%d')
