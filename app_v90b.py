@@ -113,6 +113,7 @@ class AnalisisHistorico:
             json.dump(self.resultados_historicos, f, indent=2)
     
     def agregar_resultado(self, fecha, ticker, rsi, bb_position, ganancia_d1, ganancia_d2, prima_entrada, prima_max_d1, prima_max_d2, strike):
+        """Agrega un resultado histórico verificando que sea una vela roja válida"""
         resultado = {
             'fecha': fecha,
             'ticker': ticker,
@@ -130,8 +131,10 @@ class AnalisisHistorico:
         self.resultados_historicos.append(resultado)
         self.guardar_resultados_historicos()
     
-    def calcular_ganancia_historica(self, ticker, rsi, bb_position, fecha_excluir=None, usar_mediana=True):
+    def calcular_ganancia_historica(self, ticker, rsi, bb_position, fecha_excluir=None, usar_mediana=False):
+        """Calcula ganancia histórica promedio de días similares"""
         dias_similares = []
+        dias_similares_detalle = []  # Para mostrar en modal
         
         # AMPLIAR RANGOS para encontrar más días similares
         rsi_rango = 10
@@ -159,11 +162,12 @@ class AnalisisHistorico:
                     ganancia = resultado['ganancia_d1']
                     if ganancia > 0:
                         dias_similares.append(ganancia)
+                        dias_similares_detalle.append(resultado)
                         print(f"   ✅ {resultado['fecha']}: RSI={rsi_hist:.1f}, BB={bb_hist:.2f} → D1={ganancia:.1f}%")
         
         if len(dias_similares) == 0:
             print(f"   ❌ No se encontraron días similares")
-            return None, 0
+            return None, 0, []
         
         if usar_mediana:
             ganancia_hist = np.median(dias_similares)
@@ -171,10 +175,10 @@ class AnalisisHistorico:
             ganancia_hist = np.mean(dias_similares)
         
         print(f"   📊 Ganancias encontradas: {dias_similares}")
-        print(f"   📈 {'Mediana' if usar_mediana else 'Promedio'}: {ganancia_hist:.1f}%")
+        print(f"   📈 {'Mediana' if usar_mediana else 'Promedio'}: {ganancia_hist:.0f}%")
         print(f"   📌 Total días similares: {len(dias_similares)}")
         
-        return ganancia_hist, len(dias_similares)
+        return ganancia_hist, len(dias_similares), dias_similares_detalle
     
     def agregar_operacion(self, ticker, rsi, bb_position, resultado, timestamp):
         if ticker not in self.historial:
@@ -190,6 +194,7 @@ class AnalisisHistorico:
         self.guardar_historial()
 
 def calcular_fecha_vencimiento(fecha_senal, ticker):
+    """Calcula la fecha de vencimiento correcta para el ticker"""
     rango = RANGOS_PRIMA.get(ticker, {})
     tipo_vencimiento = rango.get('vencimiento', 'viernes')
     
@@ -212,6 +217,7 @@ def calcular_fecha_vencimiento(fecha_senal, ticker):
         return fecha_venc
 
 def buscar_contratos_disponibles(client, ticker, fecha_vencimiento):
+    """Busca contratos PUT disponibles en Polygon"""
     try:
         fecha_venc_str = fecha_vencimiento.strftime('%Y-%m-%d')
         import requests
@@ -262,6 +268,7 @@ def buscar_contratos_disponibles(client, ticker, fecha_vencimiento):
         return []
 
 def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
+    """Calcula la ganancia real de la opción PUT para Día 1 y Día 2"""
     try:
         if ticker not in RANGOS_PRIMA:
             return {
@@ -281,11 +288,16 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
         strike_objetivo = round(precio_stock * 0.97, 2)
         
         fecha_str = fecha.strftime('%Y-%m-%d')
+        
+        # CORRECTO: Calcular día siguiente saltando fines de semana
         fecha_dia_siguiente = fecha + timedelta(days=1)
+        while fecha_dia_siguiente.weekday() >= 5:  # 5 = sábado, 6 = domingo
+            fecha_dia_siguiente += timedelta(days=1)
         fecha_dia_siguiente_str = fecha_dia_siguiente.strftime('%Y-%m-%d')
         
         print(f"\n=== BUSCANDO OPCIÓN PARA {ticker} ===")
         print(f"Fecha análisis: {fecha_str}")
+        print(f"Fecha día siguiente (hábil): {fecha_dia_siguiente_str}")
         print(f"Precio stock: ${precio_stock:.2f}")
         print(f"Strike objetivo (3% OTM): ${strike_objetivo:.2f}")
         
@@ -404,6 +416,7 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
             print(f"Prima apertura: ${prima_entrada:.2f}")
             print(f"Rango objetivo: ${rango['min']:.2f} - ${rango['max']:.2f}")
             
+            # Buscar prima dentro del rango si la apertura no lo está
             if prima_entrada < rango['min'] or prima_entrada > rango['max']:
                 print("Prima fuera de rango - buscando momento correcto...")
                 for p in precios_dia1:
@@ -425,6 +438,7 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
             
             print(f"  Ganancia día 1: {ganancia_dia1:.1f}% {exito_dia1}")
             
+            # CÁLCULO DÍA 2
             print(f"\n📊 CÁLCULO DÍA 2:")
             print(f"🔄 Buscando datos del día siguiente: {fecha_dia_siguiente_str}...")
             
@@ -515,6 +529,7 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
         }
 
 def cargar_historico_4_meses(client, analisis, tickers):
+    """Carga histórico de 4 meses para todos los tickers"""
     st.info("🔄 Cargando histórico de 4 meses... Esto puede tardar varios minutos.")
     
     fecha_fin = datetime.now()
@@ -570,12 +585,14 @@ def cargar_historico_4_meses(client, analisis, tickers):
             
             total_dias_analizados += len(df)
             
+            # Calcular RSI
             delta = df['close'].diff()
             gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
             rs = gain / loss
             df['RSI'] = 100 - (100 / (1 + rs))
             
+            # Calcular Bollinger Bands
             df['SMA_20'] = df['close'].rolling(20).mean()
             df['STD_20'] = df['close'].rolling(20).std()
             df['BB_Upper'] = df['SMA_20'] + (df['STD_20'] * 2)
@@ -589,47 +606,23 @@ def cargar_historico_4_meses(client, analisis, tickers):
                 actual = df.iloc[i]
                 anterior = df.iloc[i-1]
                 
+                # VERIFICAR VELA ROJA
                 vela_roja = actual['close'] < anterior['close']
                 
                 if not vela_roja:
                     continue
                 
-                if pd.isna(actual['RSI']) or pd.isna(actual['BB_Position']):
-                    continue
-                
-                rsi_actual = actual['RSI']
-                bb_position_actual = actual['BB_Position']
-                
-                prob_base = 65
-                
-                if rsi_actual > 70:
-                    prob_ajustada = prob_base + 20
-                elif rsi_actual > 60:
-                    prob_ajustada = prob_base + 10
-                elif rsi_actual > 50:
-                    prob_ajustada = prob_base
-                else:
-                    prob_ajustada = prob_base - 15
-                
-                if bb_position_actual > 0.8:
-                    prob_ajustada += 15
-                elif bb_position_actual > 0.6:
-                    prob_ajustada += 8
-                else:
-                    prob_ajustada -= 5
-                
-                probabilidad_final = max(0, min(100, prob_ajustada))
-                
-                if probabilidad_final < 60:
-                    continue
-                
                 senales_ticker += 1
-                total_senales_detectadas += 1
                 
-                fecha_senal = actual.name.date()
+                rsi_actual = actual['RSI'] if not pd.isna(actual['RSI']) else 50
+                bb_position_actual = actual['BB_Position'] if not pd.isna(actual['BB_Position']) else 0.5
                 
+                fecha_dia = actual.name.to_pydatetime()
+                fecha_str = fecha_dia.strftime('%Y-%m-%d')
+                
+                # VERIFICAR SI YA EXISTE - NO DUPLICAR
                 ya_existe = any(
-                    r['fecha'] == str(fecha_senal) and r['ticker'] == ticker 
+                    r['fecha'] == fecha_str and r['ticker'] == ticker 
                     for r in analisis.resultados_historicos
                 )
                 
@@ -639,39 +632,43 @@ def cargar_historico_4_meses(client, analisis, tickers):
                 ganancia_real = calcular_ganancia_real_opcion(
                     client,
                     ticker,
-                    fecha_senal,
+                    fecha_dia,
                     actual['open']
                 )
                 
-                analisis.agregar_resultado(
-                    fecha=str(fecha_senal),
-                    ticker=ticker,
-                    rsi=rsi_actual,
-                    bb_position=bb_position_actual,
-                    ganancia_d1=ganancia_real['ganancia_pct'],
-                    ganancia_d2=ganancia_real['ganancia_dia_siguiente'],
-                    prima_entrada=ganancia_real['prima_entrada'],
-                    prima_max_d1=ganancia_real['prima_maxima'],
-                    prima_max_d2=ganancia_real['prima_maxima_dia2'],
-                    strike=ganancia_real['strike']
-                )
-                guardados_ticker += 1
-                total_guardados += 1
+                if ganancia_real['ganancia_pct'] > 0:
+                    analisis.agregar_resultado(
+                        fecha=fecha_str,
+                        ticker=ticker,
+                        rsi=rsi_actual,
+                        bb_position=bb_position_actual,
+                        ganancia_d1=ganancia_real['ganancia_pct'],
+                        ganancia_d2=ganancia_real['ganancia_dia_siguiente'],
+                        prima_entrada=ganancia_real['prima_entrada'],
+                        prima_max_d1=ganancia_real['prima_maxima'],
+                        prima_max_d2=ganancia_real['prima_maxima_dia2'],
+                        strike=ganancia_real['strike']
+                    )
+                    guardados_ticker += 1
+                    total_guardados += 1
             
-            st.write(f"✅ {ticker}: {senales_ticker} señales detectadas → {guardados_ticker} guardadas")
-        
+            total_senales_detectadas += senales_ticker
+            st.write(f"✅ {ticker}: {senales_ticker} señales | {guardados_ticker} guardadas")
+            
         except Exception as e:
-            st.warning(f"⚠️ Error en {ticker}: {str(e)}")
-            continue
+            st.write(f"❌ {ticker}: Error - {str(e)}")
     
     progress_bar.empty()
     status_text.empty()
     
     st.success(f"""
-    ✅ Proceso completado:
-    - 📅 Días analizados: {total_dias_analizados}
-    - 🎯 Señales detectadas: {total_senales_detectadas}
-    - 💾 Resultados guardados: {total_guardados}
+    ✅ Carga histórica completada!
+    
+    📊 Estadísticas:
+    - Días analizados: {total_dias_analizados}
+    - Señales detectadas: {total_senales_detectadas}
+    - Resultados guardados: {total_guardados}
+    - Total en base de datos: {len(analisis.resultados_historicos)}
     """)
     st.balloons()
     
@@ -688,9 +685,13 @@ def main():
         st.error(f"❌ Error: {e}")
         return
     
-    tickers = ['SPY', 'QQQ', 'GOOGL', 'AMD', 'GLD', 'BBAI', 'NFLX', 'AMZN', 'CORZ', 'XOM', 'BAC']
+    # USAR TODOS LOS 33 TICKERS DEFINIDOS EN RANGOS_PRIMA
+    tickers = list(RANGOS_PRIMA.keys())
+    st.info(f"📊 Analizando {len(tickers)} tickers: {', '.join(tickers[:10])}...")
+    
     analisis = AnalisisHistorico()
     
+    # Verificar si hay suficientes datos históricos
     if len(analisis.resultados_historicos) < 200:
         st.warning(f"⚠️ Solo hay {len(analisis.resultados_historicos)} registros históricos. Se recomienda tener al menos 200.")
         
@@ -785,12 +786,14 @@ def main():
                 if len(df) < 10:
                     continue
                 
+                # Calcular RSI
                 delta = df['close'].diff()
                 gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
                 loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
                 rs = gain / loss
                 df['RSI'] = 100 - (100 / (1 + rs))
                 
+                # Calcular Bollinger Bands
                 df['SMA_20'] = df['close'].rolling(20).mean()
                 df['STD_20'] = df['close'].rolling(20).std()
                 df['BB_Upper'] = df['SMA_20'] + (df['STD_20'] * 2)
@@ -802,6 +805,8 @@ def main():
                     
                 ultimo = df.iloc[-1]
                 anterior = df.iloc[-2]
+                
+                # VERIFICAR VELA ROJA
                 vela_roja = ultimo['close'] < anterior['close']
                 
                 if not vela_roja:
@@ -812,6 +817,7 @@ def main():
                 rsi_actual = ultimo['RSI'] if not pd.isna(ultimo['RSI']) else 50
                 bb_position_actual = ultimo['BB_Position'] if not pd.isna(ultimo['BB_Position']) else 0.5
                 
+                # Calcular probabilidad
                 prob_base = 65
                 
                 if rsi_actual > 70:
@@ -842,36 +848,46 @@ def main():
                     señal = "🚫 NO"
                     trade = "NO"
                 
-                ganancia_hist, num_dias_similares = analisis.calcular_ganancia_historica(
+                # Calcular ganancia histórica con detalles
+                ganancia_hist, num_dias_similares, dias_similares_detalle = analisis.calcular_ganancia_historica(
                     ticker, 
                     rsi_actual, 
                     bb_position_actual,
                     fecha_excluir=fecha_seleccionada.strftime('%Y-%m-%d'),
-                    usar_mediana=True
+                    usar_mediana=False
                 )
                 
+                # Calcular ganancia real
                 ganancia_real = calcular_ganancia_real_opcion(
                     client,
                     ticker,
-                    fecha_seleccionada,
+                    datetime.combine(fecha_seleccionada, datetime.min.time()),
                     ultimo['open']
                 )
                 
-                analisis.agregar_resultado(
-                    fecha=fecha_seleccionada.strftime('%Y-%m-%d'),
-                    ticker=ticker,
-                    rsi=rsi_actual,
-                    bb_position=bb_position_actual,
-                    ganancia_d1=ganancia_real['ganancia_pct'],
-                    ganancia_d2=ganancia_real['ganancia_dia_siguiente'],
-                    prima_entrada=ganancia_real['prima_entrada'],
-                    prima_max_d1=ganancia_real['prima_maxima'],
-                    prima_max_d2=ganancia_real['prima_maxima_dia2'],
-                    strike=ganancia_real['strike']
+                # VERIFICAR DUPLICADOS - No guardar si ya existe este día
+                fecha_str = fecha_seleccionada.strftime('%Y-%m-%d')
+                ya_existe = any(
+                    r['fecha'] == fecha_str and r['ticker'] == ticker 
+                    for r in analisis.resultados_historicos
                 )
                 
+                if not ya_existe and ganancia_real['ganancia_pct'] > 0:
+                    analisis.agregar_resultado(
+                        fecha=fecha_str,
+                        ticker=ticker,
+                        rsi=rsi_actual,
+                        bb_position=bb_position_actual,
+                        ganancia_d1=ganancia_real['ganancia_pct'],
+                        ganancia_d2=ganancia_real['ganancia_dia_siguiente'],
+                        prima_entrada=ganancia_real['prima_entrada'],
+                        prima_max_d1=ganancia_real['prima_maxima'],
+                        prima_max_d2=ganancia_real['prima_maxima_dia2'],
+                        strike=ganancia_real['strike']
+                    )
+                
                 if ganancia_hist is not None:
-                    ganancia_hist_str = f"{ganancia_hist:.1f}% ({num_dias_similares})"
+                    ganancia_hist_str = f"{int(ganancia_hist)}% ({num_dias_similares})"
                 else:
                     ganancia_hist_str = "Sin datos"
                 
@@ -891,7 +907,8 @@ def main():
                     'Ganancia Día 1': ganancia_real['ganancia_pct'],
                     'Ganancia Día 2': ganancia_real['ganancia_dia_siguiente'],
                     'Éxito D1': ganancia_real['exito'],
-                    'Éxito D2': ganancia_real['exito_dia2']
+                    'Éxito D2': ganancia_real['exito_dia2'],
+                    '_dias_similares_detalle': dias_similares_detalle  # Para el modal
                 })
                 
             except Exception as e:
@@ -904,6 +921,25 @@ def main():
             st.subheader("📊 Resultados de Análisis")
             
             df_resultados = pd.DataFrame(resultados)
+            
+            # ORDENAR POR GANANCIA HISTÓRICA (mayor a menor) ANTES de formatear
+            def extraer_ganancia_hist(ganancia_hist_str):
+                if ganancia_hist_str == "Sin datos":
+                    return -1  # Poner al final
+                try:
+                    return float(ganancia_hist_str.split('%')[0])
+                except:
+                    return -1
+            
+            df_resultados['_ganancia_sort'] = df_resultados['Ganancia Hist'].apply(extraer_ganancia_hist)
+            df_resultados = df_resultados.sort_values('_ganancia_sort', ascending=False)
+            
+            # Guardar días similares detalle antes de eliminar columna
+            dias_similares_map = dict(zip(df_resultados['Activo'], df_resultados['_dias_similares_detalle']))
+            
+            df_resultados = df_resultados.drop(['_ganancia_sort', '_dias_similares_detalle'], axis=1)
+            
+            # Renombrar columnas
             df_resultados = df_resultados.rename(columns={
                 'Activo': 'Ticker',
                 'Hora': 'Hora',
@@ -923,6 +959,14 @@ def main():
                 'Éxito D2': 'Éxito D2'
             })
             
+            # FORMATEAR SIN DECIMALES - SOLO ENTEROS
+            df_resultados['Ganancia D1 (%)'] = df_resultados['Ganancia D1 (%)'].apply(lambda x: f"{int(x)}%" if pd.notnull(x) else "0%")
+            df_resultados['Ganancia D2 (%)'] = df_resultados['Ganancia D2 (%)'].apply(lambda x: f"{int(x)}%" if pd.notnull(x) else "0%")
+            df_resultados['Prob (%)'] = df_resultados['Prob (%)'].apply(lambda x: f"{int(x)}%" if pd.notnull(x) else "0%")
+            df_resultados['RSI'] = df_resultados['RSI'].apply(lambda x: f"{int(x)}" if pd.notnull(x) else "0")
+            df_resultados['BB Pos'] = df_resultados['BB Pos'].apply(lambda x: f"{x:.2f}" if pd.notnull(x) else "0.00")
+            
+            # Colorear columna Ganancia Hist
             def highlight_ganancia_hist(row):
                 return ['background-color: #fffacd' if col == 'Ganancia Hist (n)' else '' for col in row.index]
             
@@ -932,6 +976,124 @@ def main():
                 hide_index=True
             )
             
+            # ==========================================
+            # NUEVO: MODAL MEJORADO PARA DÍAS SIMILARES
+            # ==========================================
+            
+            st.markdown("---")
+            st.subheader("🔍 Ver Días Similares - Click en un ticker")
+            
+            # Crear botones en columnas (5 por fila)
+            tickers_resultados = [r['Activo'] for r in resultados]
+            
+            # Organizar en filas de 5 botones
+            for i in range(0, len(tickers_resultados), 5):
+                cols = st.columns(5)
+                for j, ticker in enumerate(tickers_resultados[i:i+5]):
+                    with cols[j]:
+                        # Obtener ganancia histórica para colorear botón
+                        resultado_ticker = next(r for r in resultados if r['Activo'] == ticker)
+                        ganancia_hist_str = resultado_ticker['Ganancia Hist']
+                        
+                        # Color según si tiene datos o no
+                        if "Sin datos" in ganancia_hist_str:
+                            button_type = "secondary"
+                            emoji = "⚪"
+                        else:
+                            button_type = "primary"
+                            emoji = "📊"
+                        
+                        if st.button(f"{emoji} {ticker}", key=f"modal_{ticker}", type=button_type, use_container_width=True):
+                            # Guardar en session_state para mostrar modal
+                            st.session_state.modal_ticker = ticker
+                            st.session_state.modal_open = True
+            
+            # Mostrar modal si está activo
+            if st.session_state.get('modal_open', False):
+                ticker_modal = st.session_state.get('modal_ticker')
+                
+                if ticker_modal:
+                    # Encontrar el resultado del ticker
+                    resultado_ticker = next((r for r in resultados if r['Activo'] == ticker_modal), None)
+                    
+                    if resultado_ticker:
+                        # Crear contenedor con fondo destacado
+                        with st.container():
+                            st.markdown("""
+                            <style>
+                            .modal-container {
+                                background-color: #f0f2f6;
+                                padding: 20px;
+                                border-radius: 10px;
+                                border: 2px solid #4CAF50;
+                                margin: 10px 0;
+                            }
+                            </style>
+                            """, unsafe_allow_html=True)
+                            
+                            # Header con botón cerrar
+                            col_title, col_close = st.columns([6, 1])
+                            with col_title:
+                                st.markdown(f"### 📊 Días Similares: **{ticker_modal}**")
+                            with col_close:
+                                if st.button("❌ Cerrar", key="close_modal", type="secondary"):
+                                    st.session_state.modal_open = False
+                                    st.rerun()
+                            
+                            st.markdown("---")
+                            
+                            # Obtener días similares del mapa
+                            dias_similares_detalle = dias_similares_map.get(ticker_modal, [])
+                            
+                            if dias_similares_detalle:
+                                st.success(f"✅ Se encontraron **{len(dias_similares_detalle)} días similares**")
+                                
+                                # Crear tabla de días similares
+                                dias_similares_data = []
+                                for hist_result in dias_similares_detalle:
+                                    dias_similares_data.append({
+                                        'Fecha': hist_result['fecha'],
+                                        'RSI': f"{int(hist_result['rsi'])}",
+                                        'BB Pos': f"{hist_result['bb_position']:.2f}",
+                                        'Ganancia D1': f"{int(hist_result['ganancia_d1'])}%",
+                                        'Ganancia D2': f"{int(hist_result['ganancia_d2'])}%",
+                                        'Strike': f"${hist_result['strike']:.0f}",
+                                        'Prima Entrada': f"${hist_result['prima_entrada']:.2f}"
+                                    })
+                                
+                                df_similares = pd.DataFrame(dias_similares_data)
+                                df_similares = df_similares.sort_values('Ganancia D1', ascending=False)
+                                
+                                st.dataframe(
+                                    df_similares,
+                                    use_container_width=True,
+                                    hide_index=True,
+                                    height=400
+                                )
+                                
+                                # Estadísticas
+                                ganancias_d1 = [int(d['Ganancia D1'].replace('%', '')) for d in dias_similares_data]
+                                promedio = sum(ganancias_d1) / len(ganancias_d1)
+                                mediana = sorted(ganancias_d1)[len(ganancias_d1)//2]
+                                
+                                st.info("ℹ️ El sistema usa **PROMEDIO** (no mediana) para Ganancia Histórica")
+                                
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.metric("✅ Promedio D1", f"{int(promedio)}%")
+                                with col2:
+                                    st.metric("Mediana D1", f"{int(mediana)}%")
+                                with col3:
+                                    exitos = len([g for g in ganancias_d1 if g >= 100])
+                                    tasa = (exitos / len(ganancias_d1)) * 100
+                                    st.metric("Tasa Éxito", f"{int(tasa)}%")
+                            else:
+                                st.warning(f"⚠️ No se encontraron días similares para {ticker_modal}")
+                                st.info("💡 Esto puede ocurrir porque no hay suficientes datos históricos con condiciones similares (RSI y BB Position)")
+            
+            st.markdown("---")
+            
+            # Estadísticas generales
             col_stat1, col_stat2, col_stat3, col_stat4, col_stat5 = st.columns(5)
             with col_stat1:
                 st.metric("Señales Detectadas", len(resultados))
@@ -941,7 +1103,7 @@ def main():
             with col_stat3:
                 exitos_d1 = len([r for r in resultados if r['Éxito D1'] == '✅'])
                 tasa_exito_d1 = (exitos_d1 / len(resultados) * 100) if len(resultados) > 0 else 0
-                st.metric("Éxito Día 1", f"{tasa_exito_d1:.0f}%")
+                st.metric("Éxito Día 1", f"{int(tasa_exito_d1)}%")
             with col_stat4:
                 exitos_d2 = len([r for r in resultados if r['Éxito D2'] == '✅'])
                 con_datos_d2 = len([r for r in resultados if r['Éxito D2'] != '⚪'])
@@ -949,7 +1111,7 @@ def main():
                     tasa_exito_d2 = (exitos_d2 / con_datos_d2 * 100)
                 else:
                     tasa_exito_d2 = 0
-                st.metric("Éxito Día 2", f"{tasa_exito_d2:.0f}%")
+                st.metric("Éxito Día 2", f"{int(tasa_exito_d2)}%")
             with col_stat5:
                 prob_promedio = sum([r['Probabilidad'] for r in resultados]) / len(resultados)
                 st.metric("Prob. Promedio", f"{prob_promedio:.1f}%")
@@ -957,7 +1119,7 @@ def main():
             st.info("ℹ️ No se detectaron señales para la fecha seleccionada")
     
     with col2:
-        st.subheader("💾 Registrar Trade")
+        st.subheader("💾 Registrar Trade Manual")
         
         with st.form("registro_trade"):
             ticker_reg = st.selectbox("Activo", tickers)
