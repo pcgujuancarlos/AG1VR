@@ -110,7 +110,20 @@ class AnalisisHistorico:
         try:
             with open(self.resultados_file, 'r') as f:
                 self.resultados_historicos = json.load(f)
+                # Limpiar datos corruptos
+                resultados_limpios = []
+                for r in self.resultados_historicos:
+                    if isinstance(r, dict):
+                        resultados_limpios.append(r)
+                self.resultados_historicos = resultados_limpios
         except FileNotFoundError:
+            self.resultados_historicos = []
+        except json.JSONDecodeError as e:
+            print(f"❌ Error cargando JSON: {e}")
+            print("🔄 Iniciando con base de datos vacía")
+            self.resultados_historicos = []
+        except Exception as e:
+            print(f"❌ Error inesperado: {e}")
             self.resultados_historicos = []
     
     def guardar_resultados_historicos(self):
