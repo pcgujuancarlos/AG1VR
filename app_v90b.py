@@ -213,8 +213,11 @@ def calcular_fecha_vencimiento(fecha_senal, ticker):
         dia_semana = fecha_senal.weekday()
         if dia_semana <= 4:
             dias_hasta_viernes = 4 - dia_semana
-            if dias_hasta_viernes == 0:
-                dias_hasta_viernes = 7
+            # ✅ CORRECCIÓN CRÍTICA: Si HOY es viernes (dias_hasta_viernes=0), 
+            # buscar opciones que vencen HOY mismo (0DTE), NO el siguiente viernes
+            # Esto es ESENCIAL para opciones de corto plazo que buscan 100%+ en 1 día
+            # ANTES: if dias_hasta_viernes == 0: dias_hasta_viernes = 7  ❌
+            # AHORA: Mantener dias_hasta_viernes = 0 para buscar opciones 0DTE ✅
         else:
             dias_hasta_viernes = 5 if dia_semana == 5 else 4
         fecha_venc = fecha_senal + timedelta(days=dias_hasta_viernes)
@@ -427,16 +430,17 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
         print(f"📌 Strike real: ${strike_real}")
         
         try:
+            # ✅ CORRECCIÓN: Usar agregados de 30 MINUTOS (compatible con plan Starter)
             option_aggs_dia1 = client.get_aggs(
                 ticker=option_ticker,
-                multiplier=1,
+                multiplier=30,  # ✅ 30 minutos
                 timespan="minute",
                 from_=fecha_str,
                 to=fecha_str,
                 limit=50000
             )
             
-            print(f"📊 Día 1: {len(option_aggs_dia1) if option_aggs_dia1 else 0} registros")
+            print(f"📊 Día 1: {len(option_aggs_dia1) if option_aggs_dia1 else 0} registros de 30min")
             
             if not option_aggs_dia1 or len(option_aggs_dia1) == 0:
                 print(f"❌ NO SE ENCONTRARON DATOS para {option_ticker}")
@@ -495,19 +499,30 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                 for p in precios_dia1:
                     todos_los_precios.extend([p['open'], p['high'], p['low'], p['close']])
                 
+                print(f"📊 Total de precios recolectados: {len(todos_los_precios)}")
+                print(f"📊 Rango de precios: ${min(todos_los_precios):.2f} - ${max(todos_los_precios):.2f}")
+                
                 rango_medio = (rango['min'] + rango['max']) / 2
                 
                 # Encontrar la prima más cercana al centro del rango
                 prima_mas_cercana = min(todos_los_precios, key=lambda x: abs(x - rango_medio))
                 
-                # CRÍTICO: Solo aceptar si está dentro del 150% del ancho del rango
-                diferencia_permitida = (rango['max'] - rango['min']) * 1.5
+                print(f"🎯 Rango objetivo: ${rango['min']:.2f} - ${rango['max']:.2f}")
+                print(f"🎯 Centro del rango: ${rango_medio:.2f}")
+                print(f"🎯 Prima más cercana encontrada: ${prima_mas_cercana:.2f}")
+                print(f"🎯 Diferencia al centro: ${abs(prima_mas_cercana - rango_medio):.2f}")
+                
+                # CRÍTICO: Solo aceptar si está dentro del 300% del ancho del rango (más flexible)
+                diferencia_permitida = (rango['max'] - rango['min']) * 3.0
+                
+                print(f"🎯 Diferencia máxima permitida: ${diferencia_permitida:.2f}")
                 
                 if abs(prima_mas_cercana - rango_medio) <= diferencia_permitida:
                     prima_entrada = prima_mas_cercana
                     print(f"✅ Prima MÁS CERCANA aceptada: ${prima_entrada:.2f} (diferencia: ${abs(prima_entrada - rango_medio):.2f})")
                 else:
                     print(f"❌ Prima más cercana (${prima_mas_cercana:.2f}) está DEMASIADO LEJOS del rango - rechazada")
+                    print(f"❌ Diferencia: ${abs(prima_mas_cercana - rango_medio):.2f} > Permitido: ${diferencia_permitida:.2f}")
                     return {
                         'ganancia_pct': 0,
                         'ganancia_dia_siguiente': 0,
@@ -553,9 +568,10 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
             
             option_aggs_dia2 = None
             try:
+                # ✅ Usando agregados de 30 MINUTOS (igual que día 1)
                 option_aggs_dia2 = client.get_aggs(
                     ticker=option_ticker,
-                    multiplier=1,
+                    multiplier=30,  # ✅ 30 minutos
                     timespan="minute",
                     from_=fecha_dia_siguiente_str,
                     to=fecha_dia_siguiente_str,
