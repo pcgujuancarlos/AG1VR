@@ -14,7 +14,12 @@ load_dotenv()
 # AUTENTICACIÓN CON PASSWORD
 def check_password():
     def password_entered():
-        if st.session_state["password"] == st.secrets.get("password", "Tomato4545@@"):
+        try:
+            password_correcto = st.secrets["password"]
+        except:
+            password_correcto = "Tomato4545@@"
+        
+        if st.session_state["password"] == password_correcto:
             st.session_state["password_correct"] = True
             del st.session_state["password"]
         else:
