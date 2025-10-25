@@ -429,6 +429,12 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
         
         print(f"✅ Encontrados {len(contratos)} contratos PUT")
         
+        # Mostrar algunos contratos para debugging
+        if len(contratos) > 0:
+            print(f"📋 Primeros 3 contratos disponibles:")
+            for i, c in enumerate(contratos[:3]):
+                print(f"   {c['ticker']} - Strike: ${c.get('strike_price')} - Exp: {c.get('expiration_date')}")
+        
         from collections import defaultdict
         contratos_por_fecha = defaultdict(list)
         for contrato in contratos:
@@ -657,28 +663,44 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                 print(f"🎯 Prima más cercana encontrada: ${prima_mas_cercana:.2f}")
                 print(f"🎯 Diferencia al centro: ${abs(prima_mas_cercana - rango_medio):.2f}")
                 
-                # CRÍTICO: Solo aceptar si está dentro del 300% del ancho del rango (más flexible)
-                diferencia_permitida = (rango['max'] - rango['min']) * 3.0
+                # MEJORADO: Lógica más inteligente para aceptar primas
+                # 1. Si está dentro del 50% extra del rango, aceptar
+                margen_extra = (rango['max'] - rango['min']) * 0.5
+                limite_superior = rango['max'] + margen_extra
+                limite_inferior = max(0.01, rango['min'] - margen_extra)  # Nunca menos de $0.01
                 
-                print(f"🎯 Diferencia máxima permitida: ${diferencia_permitida:.2f}")
+                print(f"🎯 Límites flexibles: ${limite_inferior:.2f} - ${limite_superior:.2f}")
                 
-                if abs(prima_mas_cercana - rango_medio) <= diferencia_permitida:
-                    prima_entrada = prima_mas_cercana
-                    print(f"✅ Prima MÁS CERCANA aceptada: ${prima_entrada:.2f} (diferencia: ${abs(prima_entrada - rango_medio):.2f})")
+                # 2. Filtrar solo primas dentro de límites razonables
+                primas_aceptables = [p for p in todos_los_precios if limite_inferior <= p <= limite_superior]
+                
+                if primas_aceptables:
+                    # Encontrar la más cercana al rango objetivo
+                    prima_entrada = min(primas_aceptables, key=lambda x: 
+                        0 if rango['min'] <= x <= rango['max'] else  # Prioridad 0 si está en rango
+                        min(abs(x - rango['min']), abs(x - rango['max']))  # Distancia al rango si está fuera
+                    )
+                    print(f"✅ Prima seleccionada: ${prima_entrada:.2f} (de {len(primas_aceptables)} opciones aceptables)")
                 else:
-                    print(f"❌ Prima más cercana (${prima_mas_cercana:.2f}) está DEMASIADO LEJOS del rango - rechazada")
-                    print(f"❌ Diferencia: ${abs(prima_mas_cercana - rango_medio):.2f} > Permitido: ${diferencia_permitida:.2f}")
-                    return {
-                        'ganancia_pct': 0,
-                        'ganancia_dia_siguiente': 0,
-                        'exito': '❌',
-                        'exito_dia2': '❌',
-                        'strike': strike_real,
-                        'prima_entrada': 0,
-                        'prima_maxima': 0,
-                        'prima_maxima_dia2': 0,
-                        'mensaje': f'Prima fuera de rango: ${prima_mas_cercana:.2f} (esperado: ${rango["min"]:.2f}-${rango["max"]:.2f})'
-                    }
+                    # Si no hay primas en límites razonables, tomar la más cercana pero avisar
+                    prima_entrada = prima_mas_cercana
+                    print(f"⚠️ AVISO: Usando prima fuera de límites: ${prima_entrada:.2f}")
+                    print(f"⚠️ Rango esperado: ${rango['min']:.2f}-${rango['max']:.2f}")
+                    
+                    # Si la prima está MUY lejos (más de 5x el rango máximo), rechazar
+                    if prima_entrada > rango['max'] * 5:
+                        print(f"❌ Prima demasiado cara: ${prima_entrada:.2f} > ${rango['max'] * 5:.2f} (5x máximo)")
+                        return {
+                            'ganancia_pct': 0,
+                            'ganancia_dia_siguiente': 0,
+                            'exito': '❌',
+                            'exito_dia2': '❌',
+                            'strike': strike_real,
+                            'prima_entrada': 0,
+                            'prima_maxima': 0,
+                            'prima_maxima_dia2': 0,
+                            'mensaje': f'Prima muy cara: ${prima_entrada:.2f} (máx: ${rango["max"]:.2f})'
+                        }
             
             if prima_entrada is None or prima_entrada == 0:
                 print("❌ No se pudo determinar prima de entrada válida")
