@@ -145,19 +145,20 @@ class AnalisisHistorico:
     
     def agregar_resultado(self, fecha, ticker, rsi, bb_position, ganancia_d1, ganancia_d2, prima_entrada, prima_max_d1, prima_max_d2, strike):
         """Agrega un resultado histórico verificando que sea una vela roja válida"""
+        # Convertir valores a tipos seguros para JSON
         resultado = {
-            'fecha': fecha,
-            'ticker': ticker,
-            'rsi': rsi,
-            'bb_position': bb_position,
-            'ganancia_d1': ganancia_d1,
-            'ganancia_d2': ganancia_d2,
-            'prima_entrada': prima_entrada,
-            'prima_max_d1': prima_max_d1,
-            'prima_max_d2': prima_max_d2,
-            'strike': strike,
-            'exitoso_d1': ganancia_d1 >= 100,
-            'exitoso_d2': ganancia_d2 >= 100
+            'fecha': str(fecha),
+            'ticker': str(ticker),
+            'rsi': float(rsi) if not pd.isna(rsi) else 0.0,
+            'bb_position': float(bb_position) if not pd.isna(bb_position) else 0.0,
+            'ganancia_d1': float(ganancia_d1) if not pd.isna(ganancia_d1) else 0.0,
+            'ganancia_d2': float(ganancia_d2) if not pd.isna(ganancia_d2) else 0.0,
+            'prima_entrada': float(prima_entrada) if not pd.isna(prima_entrada) else 0.0,
+            'prima_max_d1': float(prima_max_d1) if not pd.isna(prima_max_d1) else 0.0,
+            'prima_max_d2': float(prima_max_d2) if not pd.isna(prima_max_d2) else 0.0,
+            'strike': float(strike) if not pd.isna(strike) else 0.0,
+            'exitoso_d1': str(ganancia_d1 >= 100),  # Convertir bool a string
+            'exitoso_d2': str(ganancia_d2 >= 100)   # Convertir bool a string
         }
         self.resultados_historicos.append(resultado)
         self.guardar_resultados_historicos()
