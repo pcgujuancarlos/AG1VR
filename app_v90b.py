@@ -279,11 +279,33 @@ def calcular_fecha_vencimiento(fecha_senal, ticker):
         print(f"   [VENC] {ticker} viernes: {fecha_senal} ({fecha_senal.strftime('%A')}) → {fecha_venc} ({fecha_venc.strftime('%A')}) [+{dias_hasta_viernes}d]")
         return fecha_venc
 
-def buscar_contratos_disponibles(client, ticker, fecha_vencimiento):
+def buscar_contratos_disponibles(client, ticker, fecha_vencimiento, fecha_analisis=None):
     """Busca contratos PUT disponibles en Polygon con búsqueda agresiva"""
     try:
-        fecha_venc_str = fecha_vencimiento.strftime('%Y-%m-%d')
         import requests
+        from datetime import datetime, timedelta
+        
+        # AJUSTE CLAVE: Para datos históricos de 2024, buscar contratos de 2024
+        if fecha_analisis and fecha_analisis.year == 2024:
+            print(f"📅 Ajustando búsqueda para datos históricos de {fecha_analisis.year}")
+            # Para 2024, necesitamos contratos que vencían en 2024
+            fecha_vencimiento = fecha_vencimiento.replace(year=2024)
+            
+            # Verificar que la fecha sea posterior a la fecha de análisis
+            if fecha_vencimiento <= fecha_analisis:
+                if ticker in ['SPY', 'QQQ']:
+                    fecha_vencimiento = fecha_analisis + timedelta(days=1)
+                    while fecha_vencimiento.weekday() >= 5:
+                        fecha_vencimiento += timedelta(days=1)
+                else:
+                    dias_hasta_viernes = (4 - fecha_analisis.weekday()) % 7
+                    if dias_hasta_viernes == 0:
+                        dias_hasta_viernes = 7
+                    fecha_vencimiento = fecha_analisis + timedelta(days=dias_hasta_viernes)
+        
+        fecha_venc_str = fecha_vencimiento.strftime('%Y-%m-%d')
+        print(f"🎯 Buscando contratos PUT con vencimiento: {fecha_venc_str}")
+        
         url = f"https://api.polygon.io/v3/reference/options/contracts"
         
         # INTENTO 1: Buscar en la fecha exacta
@@ -369,7 +391,56 @@ def buscar_contratos_disponibles(client, ticker, fecha_vencimiento):
                 print(f"⚠️  Encontrados {len(data['results'])} contratos en rango ±30 días (lejos del objetivo)")
                 return data['results']
         
-        print(f"❌ NO SE ENCONTRARON CONTRATOS para {ticker} en ningún rango")
+        print(f"❌ NO SE ENCONTRARON CONTRATOS en la API para {ticker}")
+        
+        # FALLBACK: Para fechas históricas, generar contratos manualmente
+        if fecha_analisis and fecha_analisis.year == 2024:
+            print(f"\n🔧 Generando contratos manualmente para fecha histórica...")
+            
+            # Obtener precio del stock para ese día
+            try:
+                stock_aggs = client.get_aggs(
+                    ticker=ticker,
+                    multiplier=1,
+                    timespan="day",
+                    from_=fecha_analisis.strftime('%Y-%m-%d'),
+                    to=fecha_analisis.strftime('%Y-%m-%d'),
+                    limit=1
+                )
+                
+                if stock_aggs:
+                    precio_stock = stock_aggs[0].close
+                    print(f"💵 Precio del stock el {fecha_analisis.strftime('%Y-%m-%d')}: ${precio_stock:.2f}")
+                    
+                    # Generar contratos manualmente
+                    contratos_generados = []
+                    fecha_str = fecha_vencimiento.strftime('%y%m%d')
+                    
+                    # Generar strikes desde 15% ITM hasta 5% OTM
+                    strike_min = int(precio_stock * 0.85)
+                    strike_max = int(precio_stock * 1.05)
+                    step = 1 if ticker in ['SPY', 'QQQ'] else 5
+                    
+                    for strike in range(strike_min, strike_max + 1, step):
+                        option_ticker = f"O:{ticker}{fecha_str}P{strike*1000:08d}"
+                        
+                        contrato = {
+                            'ticker': option_ticker,
+                            'underlying_ticker': ticker,
+                            'contract_type': 'put',
+                            'expiration_date': fecha_vencimiento.strftime('%Y-%m-%d'),
+                            'strike_price': strike
+                        }
+                        
+                        contratos_generados.append(contrato)
+                    
+                    print(f"✅ Generados {len(contratos_generados)} contratos manualmente")
+                    print(f"📦 Rango de strikes: ${strike_min} - ${strike_max}")
+                    return contratos_generados
+                    
+            except Exception as e:
+                print(f"❌ Error generando contratos: {e}")
+        
         return []
         
     except Exception as e:
@@ -377,6 +448,421 @@ def buscar_contratos_disponibles(client, ticker, fecha_vencimiento):
         return []
 
 def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
+    """
+    VERSIÓN MEJORADA que funciona para TODAS las fechas (pasadas y futuras)
+    Lógica: vencimiento + prima en rango → strike automático
+    """
+    try:
+        if ticker not in RANGOS_PRIMA:
+            return {
+                'ganancia_pct': 0,
+                'ganancia_dia_siguiente': 0,
+                'exito': '❌',
+                'exito_dia2': '❌',
+                'strike': 0,
+                'prima_entrada': 0,
+                'prima_maxima': 0,
+                'prima_maxima_dia2': 0,
+                'mensaje': 'Sin rango definido'
+            }
+        
+        rango = RANGOS_PRIMA[ticker]
+        fecha_vencimiento = calcular_fecha_vencimiento(fecha, ticker)
+        fecha_str = fecha.strftime('%Y-%m-%d')
+        
+        # Calcular día siguiente
+        fecha_dia_siguiente = fecha + timedelta(days=1)
+        while fecha_dia_siguiente.weekday() >= 5:
+            fecha_dia_siguiente += timedelta(days=1)
+        fecha_dia_siguiente_str = fecha_dia_siguiente.strftime('%Y-%m-%d')
+        
+        print(f"\n=== NUEVA LÓGICA: BUSCANDO POR PRIMA PARA {ticker} ===")
+        print(f"Fecha análisis: {fecha_str}")
+        print(f"Vencimiento objetivo: {fecha_vencimiento.strftime('%Y-%m-%d')}")
+        print(f"🎯 RANGO DE PRIMA BUSCADO: ${rango['min']:.2f} - ${rango['max']:.2f}")
+        print(f"Precio stock actual: ${precio_stock:.2f}")
+        
+        # PASO 1: Determinar estrategia según el año
+        if fecha.year >= 2025:
+            # Para fechas futuras, intentar API primero
+            print(f"📅 Fecha futura detectada ({fecha.year}) - intentando API primero")
+            contratos = buscar_contratos_api_v2(client, ticker, fecha_vencimiento)
+            
+            # Si la API no devuelve contratos, generar manualmente
+            if not contratos:
+                print(f"⚠️ API no devolvió contratos - generando manualmente")
+                contratos = generar_contratos_historicos_v2(ticker, fecha_vencimiento, precio_stock)
+        else:
+            # Para fechas pasadas, generar contratos manualmente
+            print(f"📅 Fecha pasada detectada ({fecha.year}) - generando contratos")
+            contratos = generar_contratos_historicos_v2(ticker, fecha_vencimiento, precio_stock)
+        
+        if not contratos:
+            print(f"❌ No hay contratos PUT disponibles")
+            return {
+                'ganancia_pct': 0,
+                'ganancia_dia_siguiente': 0,
+                'exito': '❌',
+                'exito_dia2': '❌',
+                'strike': 0,
+                'prima_entrada': 0,
+                'prima_maxima': 0,
+                'prima_maxima_dia2': 0,
+                'mensaje': 'Sin contratos disponibles'
+            }
+        
+        print(f"✅ Encontrados {len(contratos)} contratos PUT para analizar")
+        
+        # Agrupar por fecha de vencimiento
+        from collections import defaultdict
+        contratos_por_fecha = defaultdict(list)
+        for contrato in contratos:
+            exp_date = contrato.get('expiration_date', '')
+            contratos_por_fecha[exp_date].append(contrato)
+        
+        # Seleccionar fecha más cercana
+        fechas_disponibles = sorted(contratos_por_fecha.keys())
+        fecha_elegida = None
+        
+        if fecha_vencimiento.strftime('%Y-%m-%d') in fechas_disponibles:
+            fecha_elegida = fecha_vencimiento.strftime('%Y-%m-%d')
+        elif fechas_disponibles:
+            # Buscar la más cercana
+            from datetime import datetime
+            # Asegurar que fecha_objetivo sea date, no datetime
+            if isinstance(fecha_vencimiento, datetime):
+                fecha_objetivo = fecha_vencimiento.date()
+            else:
+                fecha_objetivo = fecha_vencimiento
+            
+            fecha_elegida = min(fechas_disponibles, 
+                key=lambda x: abs((datetime.strptime(x, '%Y-%m-%d').date() - fecha_objetivo).days))
+        
+        if not fecha_elegida:
+            return {
+                'ganancia_pct': 0,
+                'ganancia_dia_siguiente': 0,
+                'exito': '❌',
+                'exito_dia2': '❌',
+                'strike': 0,
+                'prima_entrada': 0,
+                'prima_maxima': 0,
+                'prima_maxima_dia2': 0,
+                'mensaje': 'Sin fechas disponibles'
+            }
+        
+        contratos = contratos_por_fecha[fecha_elegida]
+        print(f"📅 Usando contratos del {fecha_elegida} ({len(contratos)} strikes)")
+        
+        # PASO 2: Buscar contratos con prima en el rango
+        mejor_contrato = None
+        prima_entrada = None
+        contratos_analizados = 0
+        contratos_con_datos = []
+        
+        print(f"\n🔍 Buscando contratos con prima entre ${rango['min']:.2f} - ${rango['max']:.2f}...")
+        print(f"💵 Precio del stock: ${precio_stock:.2f}")
+        
+        # Ordenar contratos por strike (de menor a mayor)
+        contratos_ordenados = sorted(contratos, key=lambda x: x.get('strike_price', 0))
+        print(f"📈 Analizando {len(contratos_ordenados)} contratos...")
+        print(f"🔍 Strikes disponibles: ${contratos_ordenados[0]['strike_price']} - ${contratos_ordenados[-1]['strike_price']}")
+        
+        # Analizar cada contrato
+        for contrato in contratos_ordenados:
+            contratos_analizados += 1
+            option_ticker = contrato['ticker']
+            strike = contrato['strike_price']
+            
+            # Solo analizar strikes razonables para PUT (strike < precio para OTM)
+            # Para PUT: OTM cuando strike < precio_stock
+            distancia_pct = ((strike - precio_stock) / precio_stock) * 100
+            
+            # Para PUT queremos strikes DEBAJO del precio (distancia negativa)
+            # Aceptar desde 10% ITM hasta 10% OTM
+            if distancia_pct > 10 or distancia_pct < -10:  # Skip si está muy lejos
+                if contratos_analizados <= 5:
+                    print(f"      ⚠️ Strike ${strike} excluido (distancia: {distancia_pct:+.1f}%)")
+                continue
+            
+            # Mostrar progreso cada 5 contratos
+            if contratos_analizados % 5 == 1:
+                print(f"   Analizando strike ${strike:.0f} ({distancia_pct:+.1f}% del precio)...")
+            
+            try:
+                # Obtener datos del día
+                # IMPORTANTE: Usar 1 minuto para datos históricos, mejor granularidad
+                multiplier = 1 if fecha and fecha.year < 2025 else 5
+                
+                option_aggs = client.get_aggs(
+                    ticker=option_ticker,
+                    multiplier=multiplier,
+                    timespan="minute",
+                    from_=fecha_str,
+                    to=fecha_str,
+                    limit=50000
+                )
+                
+                if option_aggs and len(option_aggs) > 0:
+                    # Buscar si alguna prima está en el rango
+                    prima_encontrada = False
+                    prima_en_rango = None
+                    
+                    # Recolectar todos los precios del día
+                    todos_precios = []
+                    for agg in option_aggs:
+                        precios = [agg.open, agg.high, agg.low, agg.close]
+                        todos_precios.extend(precios)
+                    
+                    # Debug para strikes importantes
+                    if strike in [576, 577, 578, 579, 580]:
+                        print(f"      🔍 Strike ${strike}: {len(option_aggs)} agregados, rango ${min(todos_precios):.2f}-${max(todos_precios):.2f}")
+                        
+                        # Verificar si algún precio está en el rango
+                        for precio in precios:
+                            if rango['min'] <= precio <= rango['max']:
+                                if not prima_encontrada:  # Solo guardar el primer precio en rango
+                                    prima_en_rango = precio
+                                    prima_encontrada = True
+                    
+                    if todos_precios:
+                        min_prima = min(todos_precios)
+                        max_prima = max(todos_precios)
+                        promedio_prima = sum(todos_precios) / len(todos_precios)
+                        
+                        contratos_con_datos.append({
+                            'ticker': option_ticker,
+                            'strike': strike,
+                            'min_prima': min_prima,
+                            'max_prima': max_prima,
+                            'promedio_prima': promedio_prima,
+                            'prima_en_rango': prima_en_rango,
+                            'distancia_pct': distancia_pct,
+                            'en_rango': prima_encontrada
+                        })
+                        
+                        if prima_encontrada and not mejor_contrato:
+                            mejor_contrato = contrato
+                            prima_entrada = prima_en_rango
+                            print(f"\n✅ ¡¡¡ENCONTRADO!!!")
+                            print(f"   Strike: ${strike:.2f}")
+                            print(f"   Prima en rango: ${prima_en_rango:.2f}")
+                            print(f"   Distancia del precio: {distancia_pct:+.1f}%")
+                            # NO hacer break aquí, continuar recolectando datos para estadísticas
+                
+            except Exception as e:
+                if strike in [576, 577, 578, 579, 580]:
+                    print(f"      ❌ Error en strike ${strike}: {str(e)}")
+                continue
+        
+        print(f"\n📊 Analizados {contratos_analizados} contratos, {len(contratos_con_datos)} con datos")
+        
+        # Si no encontramos ninguno en el rango, buscar el más cercano
+        if not mejor_contrato and contratos_con_datos:
+            print(f"\n⚠️ No se encontró prima exacta en rango ${rango['min']:.2f}-${rango['max']:.2f}")
+            print("🔍 Buscando la prima más cercana...")
+            
+            rango_medio = (rango['min'] + rango['max']) / 2
+            
+            # Ordenar por cercanía al rango
+            contratos_con_datos.sort(key=lambda x: min(
+                abs(x['min_prima'] - rango_medio),
+                abs(x['max_prima'] - rango_medio),
+                abs(x['promedio_prima'] - rango_medio)
+            ))
+            
+            # Mostrar las 3 mejores opciones
+            print("\n📋 Mejores opciones disponibles:")
+            for i, c in enumerate(contratos_con_datos[:3]):
+                print(f"   {i+1}. Strike ${c['strike']:.2f} - Primas: ${c['min_prima']:.2f}-${c['max_prima']:.2f} (prom: ${c['promedio_prima']:.2f})")
+            
+            # Seleccionar el más cercano
+            mejor_opcion = contratos_con_datos[0]
+            
+            # Buscar el contrato correspondiente
+            for contrato in contratos:
+                if contrato['ticker'] == mejor_opcion['ticker']:
+                    mejor_contrato = contrato
+                    # Buscar la prima más cercana al rango objetivo
+                    # Si hay una prima en rango, usarla
+                    if mejor_opcion['prima_en_rango']:
+                        prima_entrada = mejor_opcion['prima_en_rango']
+                    else:
+                        # Si no, usar el promedio como aproximación
+                        prima_entrada = mejor_opcion['promedio_prima']
+                    break
+            
+            print(f"\n✅ Seleccionado: Strike ${mejor_opcion['strike']:.2f} con prima ${prima_entrada:.2f}")
+        
+        if not mejor_contrato:
+            print("❌ No se pudo encontrar ningún contrato adecuado")
+            return {
+                'ganancia_pct': 0,
+                'ganancia_dia_siguiente': 0,
+                'exito': '❌',
+                'exito_dia2': '❌',
+                'strike': 0,
+                'prima_entrada': 0,
+                'prima_maxima': 0,
+                'prima_maxima_dia2': 0,
+                'mensaje': 'Sin contratos con datos'
+            }
+        
+        # PASO 3: Calcular ganancias
+        option_ticker = mejor_contrato['ticker']
+        strike_real = mejor_contrato['strike_price']
+        
+        print(f"\n📈 CALCULANDO GANANCIAS para {option_ticker}")
+        print(f"   Strike seleccionado: ${strike_real:.2f}")
+        print(f"   Prima de entrada: ${prima_entrada:.2f}")
+        
+        # Obtener prima máxima del día 1
+        try:
+            # Usar 1 minuto para mejor precisión en datos históricos
+            multiplier = 1 if fecha.year < 2025 else 5
+            
+            option_aggs_dia1 = client.get_aggs(
+                ticker=option_ticker,
+                multiplier=multiplier,
+                timespan="minute",
+                from_=fecha_str,
+                to=fecha_str,
+                limit=50000
+            )
+            
+            if option_aggs_dia1:
+                prima_maxima_dia1 = max([agg.high for agg in option_aggs_dia1])
+            else:
+                prima_maxima_dia1 = prima_entrada
+        except:
+            prima_maxima_dia1 = prima_entrada
+        
+        # Calcular ganancia día 1
+        ganancia_dia1 = ((prima_maxima_dia1 - prima_entrada) / prima_entrada * 100) if prima_entrada > 0 else 0
+        
+        # Día 2
+        prima_maxima_dia2 = 0
+        ganancia_dia2 = 0
+        
+        try:
+            option_aggs_dia2 = client.get_aggs(
+                ticker=option_ticker,
+                multiplier=multiplier,
+                timespan="minute",
+                from_=fecha_dia_siguiente_str,
+                to=fecha_dia_siguiente_str,
+                limit=50000
+            )
+            
+            if option_aggs_dia2:
+                prima_maxima_dia2 = max([agg.high for agg in option_aggs_dia2])
+                ganancia_dia2 = ((prima_maxima_dia2 - prima_entrada) / prima_entrada * 100) if prima_entrada > 0 else 0
+        except:
+            pass
+        
+        print(f"\n📊 RESULTADOS FINALES:")
+        print(f"   Prima entrada: ${prima_entrada:.2f}")
+        print(f"   Prima máxima D1: ${prima_maxima_dia1:.2f}")
+        print(f"   Ganancia D1: {ganancia_dia1:.1f}%")
+        print(f"   Prima máxima D2: ${prima_maxima_dia2:.2f}")
+        print(f"   Ganancia D2: {ganancia_dia2:.1f}%")
+        
+        return {
+            'ganancia_pct': round(ganancia_dia1, 1),
+            'ganancia_dia_siguiente': round(ganancia_dia2, 1),
+            'exito': '✅' if ganancia_dia1 >= 100 else '❌',
+            'exito_dia2': '✅' if ganancia_dia2 >= 100 else '❌',
+            'strike': strike_real,
+            'prima_entrada': round(prima_entrada, 2) if prima_entrada else 0,
+            'prima_maxima': round(prima_maxima_dia1, 2),
+            'prima_maxima_dia2': round(prima_maxima_dia2, 2),
+            'mensaje': f'Strike ${strike_real:.2f} (auto-seleccionado por prima)'
+        }
+        
+    except Exception as e:
+        print(f"❌ ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'ganancia_pct': 0,
+            'ganancia_dia_siguiente': 0,
+            'exito': '❌',
+            'exito_dia2': '❌',
+            'strike': 0,
+            'prima_entrada': 0,
+            'prima_maxima': 0,
+            'prima_maxima_dia2': 0,
+            'mensaje': f'Error: {str(e)}'
+        }
+
+def buscar_contratos_api_v2(client, ticker, fecha_vencimiento):
+    """Busca contratos usando la API (para fechas futuras)"""
+    import requests
+    from datetime import timedelta
+    
+    url = "https://api.polygon.io/v3/reference/options/contracts"
+    
+    # Buscar con rango flexible
+    params = {
+        'underlying_ticker': ticker,
+        'contract_type': 'put',
+        'expiration_date.gte': (fecha_vencimiento - timedelta(days=7)).strftime('%Y-%m-%d'),
+        'expiration_date.lte': (fecha_vencimiento + timedelta(days=7)).strftime('%Y-%m-%d'),
+        'limit': 250,
+        'apiKey': API_KEY,
+        'order': 'asc',
+        'sort': 'strike_price'
+    }
+    
+    try:
+        response = requests.get(url, params=params, timeout=30)
+        if response.status_code == 200:
+            data = response.json()
+            contratos = data.get('results', [])
+            if contratos:
+                print(f"✅ {len(contratos)} contratos encontrados en API")
+                return contratos
+    except Exception as e:
+        print(f"❌ Error API: {e}")
+    
+    return []
+
+
+def generar_contratos_historicos_v2(ticker, fecha_vencimiento, precio_stock):
+    """Genera contratos manualmente para fechas históricas"""
+    contratos = []
+    fecha_str = fecha_vencimiento.strftime('%y%m%d')
+    
+    # Generar strikes desde 15% ITM hasta 5% OTM
+    strike_min = int(precio_stock * 0.85)
+    strike_max = int(precio_stock * 1.05)
+    
+    # Step según ticker
+    if ticker in ['SPY', 'QQQ']:
+        step = 1
+    elif ticker in ['TSLA']:
+        step = 5
+    else:
+        step = 1 if precio_stock < 100 else 5
+    
+    for strike in range(strike_min, strike_max + 1, step):
+        option_ticker = f"O:{ticker}{fecha_str}P{strike*1000:08d}"
+        
+        contrato = {
+            'ticker': option_ticker,
+            'underlying_ticker': ticker,
+            'contract_type': 'put',
+            'expiration_date': fecha_vencimiento.strftime('%Y-%m-%d'),
+            'strike_price': strike
+        }
+        
+        contratos.append(contrato)
+    
+    print(f"✅ {len(contratos)} contratos generados (strikes ${strike_min}-${strike_max})")
+    return contratos
+
+
+def calcular_ganancia_real_opcion_OLD(client, ticker, fecha, precio_stock):
     """Calcula la ganancia real de la opción PUT para Día 1 y Día 2"""
     try:
         if ticker not in RANGOS_PRIMA:
@@ -411,7 +897,7 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
         print(f"Strike objetivo (3% OTM): ${strike_objetivo:.2f}")
         
         print("\n🔍 Buscando contratos disponibles...")
-        contratos = buscar_contratos_disponibles(client, ticker, fecha_vencimiento)
+        contratos = buscar_contratos_disponibles(client, ticker, fecha_vencimiento, fecha_analisis=fecha)
         
         if not contratos or len(contratos) == 0:
             print(f"❌ No hay contratos PUT disponibles para {ticker}")
@@ -822,6 +1308,43 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
 
 def cargar_historico_4_meses(client, analisis, tickers):
     """Carga histórico de 4 meses para todos los tickers"""
+    # NUEVO: Confirmación para borrar datos existentes
+    st.warning("⚠️ **Importante**: Se recomienda borrar los datos existentes antes de cargar nuevos para evitar duplicados")
+    
+    col1, col2, col3 = st.columns([1, 1, 2])
+    with col1:
+        if st.button("🗑️ Borrar y cargar limpio", type="primary", key="borrar_antes_cargar"):
+            try:
+                archivos_borrados = []
+                if os.path.exists("historial_operaciones.json"):
+                    os.remove("historial_operaciones.json")
+                    archivos_borrados.append("historial_operaciones.json")
+                if os.path.exists("resultados_historicos.json"):
+                    os.remove("resultados_historicos.json")
+                    archivos_borrados.append("resultados_historicos.json")
+                
+                if archivos_borrados:
+                    st.success(f"✅ Archivos borrados: {', '.join(archivos_borrados)}")
+                    st.info("🔄 Recargando aplicación...")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.info("No había archivos para borrar")
+            except Exception as e:
+                st.error(f"Error al borrar archivos: {e}")
+                return
+    
+    with col2:
+        if st.button("💾 Mantener datos existentes", key="mantener_datos"):
+            st.info("📁 Los nuevos datos se agregarán a los existentes")
+    
+    with col3:
+        st.caption("Selecciona una opción antes de continuar")
+    
+    # Solo continuar si se seleccionó alguna opción
+    if not (st.session_state.get('borrar_antes_cargar') or st.session_state.get('mantener_datos')):
+        st.stop()
+    
     st.info("🔄 Cargando histórico de 4 meses... Esto puede tardar varios minutos.")
     
     fecha_fin = datetime.now()
@@ -1216,12 +1739,14 @@ def main():
                         strike=ganancia_real['strike']
                     )
                 
-                if ganancia_hist is not None:
-                    ganancia_hist_str = f"{int(ganancia_hist)}% ({num_dias_similares})"
-                else:
-                    ganancia_hist_str = "Sin datos"
-                
-                resultados.append({
+                # SOLO agregar a resultados si tiene señal positiva (trade = SI)
+                if trade == "SI":
+                    if ganancia_hist is not None:
+                        ganancia_hist_str = f"{int(ganancia_hist)}% ({num_dias_similares})"
+                    else:
+                        ganancia_hist_str = "Sin datos"
+                    
+                    resultados.append({
                     'Activo': ticker,
                     'Hora': hora_senal,
                     'Señal': señal,
@@ -1286,7 +1811,8 @@ def main():
                 'Ganancia Día 1': 'Ganancia D1 (%)',
                 'Ganancia Día 2': 'Ganancia D2 (%)',
                 'Éxito D1': 'Éxito D1',
-                'Éxito D2': 'Éxito D2'
+                'Éxito D2': 'Éxito D2',
+                'Detalle': 'Ver Detalle'
             })
             
             # FORMATEAR SIN DECIMALES - SOLO ENTEROS
@@ -1300,11 +1826,66 @@ def main():
             def highlight_ganancia_hist(row):
                 return ['background-color: #fffacd' if col == 'Ganancia Hist (n)' else '' for col in row.index]
             
+            # Agregar nota sobre cómo ver detalles
+            st.info("💡 **Tip**: Usa los expandibles debajo de cada ticker para ver el detalle de días históricos")
+            
+            # Mostrar tabla principal
             st.dataframe(
                 df_resultados.style.apply(highlight_ganancia_hist, axis=1),
                 use_container_width=True, 
                 hide_index=True
             )
+            
+            # Crear expandibles para cada ticker con ganancia histórica
+            st.markdown("---")
+            st.subheader("📊 Detalle de Días Históricos por Ticker")
+            
+            # Filtrar solo tickers con datos históricos
+            tickers_con_datos_hist = []
+            for idx, row in df_resultados.iterrows():
+                if "Sin datos" not in row['Ganancia Hist (n)']:
+                    tickers_con_datos_hist.append(row['Ticker'])
+            
+            if tickers_con_datos_hist:
+                # Crear columnas para organizar expandibles
+                cols_per_row = 3
+                for i in range(0, len(tickers_con_datos_hist), cols_per_row):
+                    cols = st.columns(cols_per_row)
+                    for j, ticker in enumerate(tickers_con_datos_hist[i:i+cols_per_row]):
+                        if j < len(cols):
+                            with cols[j]:
+                                # Obtener datos del ticker
+                                row_data = df_resultados[df_resultados['Ticker'] == ticker].iloc[0]
+                                ganancia_hist = row_data['Ganancia Hist (n)']
+                                
+                                # Crear expandible con información condensada
+                                with st.expander(f"📁 {ticker} - {ganancia_hist}"):
+                                    dias_detalle = dias_similares_map.get(ticker, [])
+                                    if dias_detalle:
+                                        st.success(f"✅ {len(dias_detalle)} días similares")
+                                        
+                                        # Mostrar estadísticas rápidas
+                                        ganancias_d1 = [d['ganancia_d1'] for d in dias_detalle]
+                                        promedio = np.mean(ganancias_d1)
+                                        mediana = np.median(ganancias_d1)
+                                        
+                                        col_stat1, col_stat2 = st.columns(2)
+                                        with col_stat1:
+                                            st.metric("Promedio", f"{promedio:.0f}%")
+                                        with col_stat2:
+                                            st.metric("Mediana", f"{mediana:.0f}%")
+                                        
+                                        # Tabla compacta de días
+                                        st.markdown("**Detalle por día:**")
+                                        for d in dias_detalle[:5]:  # Mostrar solo primeros 5
+                                            st.text(f"📅 {d['fecha']}: D1={d['ganancia_d1']:.0f}% | RSI={d['rsi']:.0f}")
+                                        
+                                        if len(dias_detalle) > 5:
+                                            st.text(f"... y {len(dias_detalle)-5} días más")
+                                    else:
+                                        st.warning("Sin datos históricos")
+            else:
+                st.info("📊 No hay tickers con datos históricos para mostrar")
             
             # ==========================================
             # NUEVO: MODAL MEJORADO PARA DÍAS SIMILARES
@@ -1312,6 +1893,9 @@ def main():
             
             st.markdown("---")
             st.subheader("🔍 Ver Días Similares - Click en un ticker")
+            
+            # Info adicional
+            st.markdown("📖 **Opciones adicionales**: También puedes usar los botones de abajo para ver detalles más completos")
             
             # Crear botones en columnas (5 por fila)
             tickers_resultados = [r['Activo'] for r in resultados]
