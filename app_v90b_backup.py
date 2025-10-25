@@ -110,81 +110,26 @@ class AnalisisHistorico:
         try:
             with open(self.resultados_file, 'r') as f:
                 self.resultados_historicos = json.load(f)
-                # Limpiar datos corruptos
-                resultados_limpios = []
-                for r in self.resultados_historicos:
-                    if isinstance(r, dict):
-                        resultados_limpios.append(r)
-                self.resultados_historicos = resultados_limpios
         except FileNotFoundError:
-            self.resultados_historicos = []
-        except json.JSONDecodeError as e:
-            print(f"❌ Error cargando JSON: {e}")
-            print("🔄 Iniciando con base de datos vacía")
-            self.resultados_historicos = []
-        except Exception as e:
-            print(f"❌ Error inesperado: {e}")
             self.resultados_historicos = []
     
     def guardar_resultados_historicos(self):
-        # Convertir valores para asegurar compatibilidad JSON
-        resultados_limpios = []
-        for r in self.resultados_historicos:
-            resultado_limpio = {}
-            for k, v in r.items():
-                if isinstance(v, bool):
-                    # Mantener booleanos como booleanos (JSON los soporta)
-                    resultado_limpio[k] = v
-                elif isinstance(v, (int, float)):
-                    # Manejar NaN y infinitos
-                    if pd.isna(v) or np.isinf(v):
-                        resultado_limpio[k] = 0
-                    else:
-                        resultado_limpio[k] = v
-                elif v is None:
-                    resultado_limpio[k] = 0
-                else:
-                    resultado_limpio[k] = str(v)  # Convertir otros tipos a string
-            resultados_limpios.append(resultado_limpio)
-        
-        try:
-            with open(self.resultados_file, 'w') as f:
-                json.dump(resultados_limpios, f, indent=2)
-        except Exception as e:
-            print(f"❌ Error guardando JSON: {e}")
-            # Intentar guardar versión simplificada
-            try:
-                resultados_seguros = []
-                for r in resultados_limpios:
-                    resultado_seguro = {}
-                    for k, v in r.items():
-                        try:
-                            json.dumps(v)  # Verificar que sea serializable
-                            resultado_seguro[k] = v
-                        except:
-                            resultado_seguro[k] = str(v)
-                    resultados_seguros.append(resultado_seguro)
-                
-                with open(self.resultados_file, 'w') as f:
-                    json.dump(resultados_seguros, f, indent=2)
-                print("✅ Guardado con conversión de seguridad")
-            except Exception as e2:
-                print(f"❌ Error crítico: {e2}")
+        with open(self.resultados_file, 'w') as f:
+            json.dump(self.resultados_historicos, f, indent=2)
     
     def agregar_resultado(self, fecha, ticker, rsi, bb_position, ganancia_d1, ganancia_d2, prima_entrada, prima_max_d1, prima_max_d2, strike):
         """Agrega un resultado histórico verificando que sea una vela roja válida"""
-        # Convertir valores a tipos seguros para JSON
         resultado = {
-            'fecha': str(fecha),
-            'ticker': str(ticker),
-            'rsi': float(rsi) if not pd.isna(rsi) else 0.0,
-            'bb_position': float(bb_position) if not pd.isna(bb_position) else 0.0,
-            'ganancia_d1': float(ganancia_d1) if not pd.isna(ganancia_d1) else 0.0,
-            'ganancia_d2': float(ganancia_d2) if not pd.isna(ganancia_d2) else 0.0,
-            'prima_entrada': float(prima_entrada) if not pd.isna(prima_entrada) else 0.0,
-            'prima_max_d1': float(prima_max_d1) if not pd.isna(prima_max_d1) else 0.0,
-            'prima_max_d2': float(prima_max_d2) if not pd.isna(prima_max_d2) else 0.0,
-            'strike': float(strike) if not pd.isna(strike) else 0.0,
+            'fecha': fecha,
+            'ticker': ticker,
+            'rsi': rsi,
+            'bb_position': bb_position,
+            'ganancia_d1': ganancia_d1,
+            'ganancia_d2': ganancia_d2,
+            'prima_entrada': prima_entrada,
+            'prima_max_d1': prima_max_d1,
+            'prima_max_d2': prima_max_d2,
+            'strike': strike,
             'exitoso_d1': ganancia_d1 >= 100,
             'exitoso_d2': ganancia_d2 >= 100
         }
@@ -499,106 +444,16 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
             
             if not option_aggs_dia1 or len(option_aggs_dia1) == 0:
                 print(f"❌ NO SE ENCONTRARON DATOS para {option_ticker}")
-                print("🔄 Usando estimación basada en volatilidad del subyacente...")
-                
-                # NUEVA ESTRATEGIA: Estimar primas usando volatilidad del subyacente
-                # Compatible con plan Starter que no tiene datos históricos de opciones
-                
-                # 1. Obtener volatilidad histórica del subyacente
-                fecha_30_dias_atras = fecha - timedelta(days=30)
-                volatilidad_anual = 0.25  # Por defecto
-                
-                try:
-                    stock_aggs = client.get_aggs(
-                        ticker=ticker,
-                        multiplier=1,
-                        timespan="day", 
-                        from_=fecha_30_dias_atras.strftime('%Y-%m-%d'),
-                        to=fecha_str,
-                        limit=50
-                    )
-                    
-                    if stock_aggs and len(stock_aggs) > 10:
-                        precios_cierre = [agg.close for agg in stock_aggs]
-                        rendimientos = []
-                        for i in range(1, len(precios_cierre)):
-                            rendimiento = np.log(precios_cierre[i] / precios_cierre[i-1])
-                            rendimientos.append(rendimiento)
-                        
-                        volatilidad_diaria = np.std(rendimientos)
-                        volatilidad_anual = volatilidad_diaria * np.sqrt(252)
-                        print(f"📊 Volatilidad anual calculada: {volatilidad_anual:.2%}")
-                    else:
-                        # Volatilidades por defecto según ticker
-                        volatilidades_default = {
-                            'SPY': 0.15, 'QQQ': 0.20, 'AAPL': 0.25, 'AMD': 0.40,
-                            'AMZN': 0.25, 'META': 0.30, 'MSFT': 0.22, 'NVDA': 0.45,
-                            'TSLA': 0.50, 'GLD': 0.12, 'GOOGL': 0.25, 'NFLX': 0.35,
-                            'MRNA': 0.60, 'BAC': 0.25, 'SLV': 0.30, 'USO': 0.40,
-                            'TNA': 0.45, 'XOM': 0.28, 'CVX': 0.28, 'PLTR': 0.55,
-                            'BABA': 0.35, 'CMG': 0.25, 'SMCI': 0.60, 'AVGO': 0.30,
-                            'CORZ': 0.70, 'BBAI': 0.65, 'SOUN': 0.60, 'LAC': 0.55,
-                            'RKLB': 0.50, 'POWI': 0.35, 'CRWD': 0.40, 'IREN': 0.65,
-                            'TIGO': 0.45, 'RR': 0.50
-                        }
-                        volatilidad_anual = volatilidades_default.get(ticker, 0.30)
-                        print(f"⚠️ Usando volatilidad por defecto: {volatilidad_anual:.2%}")
-                except:
-                    pass
-                
-                # 2. Calcular tiempo hasta vencimiento
-                dias_hasta_vencimiento = (fecha_vencimiento - fecha).days
-                tiempo_hasta_vencimiento = dias_hasta_vencimiento / 365.0
-                
-                # 3. Estimar prima usando modelo simplificado
-                moneyness = precio_stock / strike_real
-                
-                if moneyness > 1:  # OTM
-                    otm_factor = 1 - moneyness
-                    prima_base = precio_stock * volatilidad_anual * np.sqrt(tiempo_hasta_vencimiento) * 0.4
-                    prima_estimada = prima_base * np.exp(otm_factor * 3)
-                    
-                    if dias_hasta_vencimiento <= 2:
-                        prima_minima = precio_stock * 0.001 * (1 + volatilidad_anual)
-                        prima_estimada = max(prima_estimada, prima_minima)
-                else:
-                    prima_estimada = max(strike_real - precio_stock, 0) + precio_stock * volatilidad_anual * np.sqrt(tiempo_hasta_vencimiento) * 0.4
-                
-                # 4. Ajustar prima al rango esperado
-                prima_entrada = min(max(prima_estimada, rango['min']), rango['max'])
-                
-                # 5. Estimar variación intradiaria
-                factor_variacion = 1 + (volatilidad_anual * 0.5)
-                prima_maxima_dia1 = prima_estimada * factor_variacion
-                
-                # 6. Estimar prima día 2 con decaimiento theta
-                theta_decay = 1 / dias_hasta_vencimiento if dias_hasta_vencimiento > 0 else 0.5
-                prima_maxima_dia2 = prima_maxima_dia1 * (1 - theta_decay * 0.3)
-                
-                # 7. Calcular ganancias estimadas
-                ganancia_dia1 = ((prima_maxima_dia1 - prima_entrada) / prima_entrada * 100) if prima_entrada > 0 else 0
-                ganancia_dia2 = ((prima_maxima_dia2 - prima_entrada) / prima_entrada * 100) if prima_entrada > 0 else 0
-                
-                exito_dia1 = '✅' if ganancia_dia1 >= 100 else '❌'
-                exito_dia2 = '✅' if ganancia_dia2 >= 100 else '❌'
-                
-                print(f"\n📊 ESTIMACIÓN (sin datos históricos):")
-                print(f"  Prima entrada estimada: ${prima_entrada:.2f}")
-                print(f"  Prima máxima D1 estimada: ${prima_maxima_dia1:.2f}")
-                print(f"  Prima máxima D2 estimada: ${prima_maxima_dia2:.2f}")
-                print(f"  Ganancia D1 estimada: {ganancia_dia1:.1f}% {exito_dia1}")
-                print(f"  Ganancia D2 estimada: {ganancia_dia2:.1f}% {exito_dia2}")
-                
                 return {
-                    'ganancia_pct': round(ganancia_dia1, 1),
-                    'ganancia_dia_siguiente': round(ganancia_dia2, 1),
-                    'exito': exito_dia1,
-                    'exito_dia2': exito_dia2,
+                    'ganancia_pct': 0,
+                    'ganancia_dia_siguiente': 0,
+                    'exito': '❌',
+                    'exito_dia2': '❌',
                     'strike': strike_real,
-                    'prima_entrada': round(prima_entrada, 2),
-                    'prima_maxima': round(prima_maxima_dia1, 2),
-                    'prima_maxima_dia2': round(prima_maxima_dia2, 2),
-                    'mensaje': f'ESTIMADO - D1: ${prima_entrada}→${prima_maxima_dia1:.2f}'
+                    'prima_entrada': 0,
+                    'prima_maxima': 0,
+                    'prima_maxima_dia2': 0,
+                    'mensaje': 'Sin datos opción'
                 }
             
             precios_dia1 = []
