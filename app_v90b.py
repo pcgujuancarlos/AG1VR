@@ -234,11 +234,29 @@ def buscar_contratos_disponibles(client, ticker, fecha_vencimiento):
         
         response = requests.get(url, params=params)
         
+        print(f"📡 Status Code: {response.status_code}")
+        
+        if response.status_code != 200:
+            print(f"❌ ERROR HTTP {response.status_code}")
+            print(f"Response: {response.text[:200]}")
+            return []
+        
         if response.status_code == 200:
             data = response.json()
+            print(f"📦 Response keys: {data.keys() if data else 'empty'}")
+            
+            if 'status' in data:
+                print(f"📌 Status: {data['status']}")
+            
+            if 'message' in data:
+                print(f"📌 Message: {data['message']}")
+            
             if 'results' in data and len(data['results']) > 0:
                 print(f"✅ Encontrados {len(data['results'])} contratos para {fecha_venc_str}")
                 return data['results']
+            else:
+                print(f"⚠️  Response tiene 'results' pero vacío o no existe")
+                print(f"⚠️  Contenido completo: {data}")
         
         print(f"⚠️  No hay contratos para {fecha_venc_str}")
         
