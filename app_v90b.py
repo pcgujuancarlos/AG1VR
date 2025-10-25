@@ -48,67 +48,180 @@ RANGOS_PRIMA = {
     'AMZN': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
     'META': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
     'MSFT': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
-    'NVDA': {'min': 0.80, 'max': 1.00, 'vencimiento': 'viernes'},
-    'TESLA': {'min': 0.80, 'max': 1.00, 'vencimiento': 'viernes'},
-    'GLD': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
     'GOOGL': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
-    'GOOG': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
-    'BRK.B': {'min': 0.50, 'max': 0.70, 'vencimiento': 'viernes'},
-    'JPM': {'min': 0.50, 'max': 0.70, 'vencimiento': 'viernes'},
-    'V': {'min': 0.50, 'max': 0.70, 'vencimiento': 'viernes'},
-    'MA': {'min': 0.50, 'max': 0.70, 'vencimiento': 'viernes'},
-    'UNH': {'min': 0.50, 'max': 0.70, 'vencimiento': 'viernes'},
-    'HD': {'min': 0.50, 'max': 0.70, 'vencimiento': 'viernes'},
-    'DIS': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
-    'ADBE': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
-    'CRM': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
-    'NFLX': {'min': 0.70, 'max': 0.90, 'vencimiento': 'viernes'},
-    'PFE': {'min': 0.40, 'max': 0.60, 'vencimiento': 'viernes'},
-    'KO': {'min': 0.30, 'max': 0.50, 'vencimiento': 'viernes'},
-    'PEP': {'min': 0.30, 'max': 0.50, 'vencimiento': 'viernes'},
-    'WMT': {'min': 0.40, 'max': 0.60, 'vencimiento': 'viernes'},
-    'BAC': {'min': 0.40, 'max': 0.60, 'vencimiento': 'viernes'},
-    'XOM': {'min': 0.50, 'max': 0.70, 'vencimiento': 'viernes'},
-    'CVX': {'min': 0.50, 'max': 0.70, 'vencimiento': 'viernes'},
-    'ABBV': {'min': 0.40, 'max': 0.60, 'vencimiento': 'viernes'},
-    'COST': {'min': 0.50, 'max': 0.70, 'vencimiento': 'viernes'},
+    'NVDA': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
+    'TSLA': {'min': 2.50, 'max': 3.00, 'vencimiento': 'viernes'},
+    'NFLX': {'min': 1.50, 'max': 2.50, 'vencimiento': 'viernes'},
+    'MRNA': {'min': 2.00, 'max': 2.00, 'vencimiento': 'viernes'},
+    'BAC': {'min': 0.10, 'max': 0.20, 'vencimiento': 'viernes'},
+    'SLV': {'min': 0.10, 'max': 0.20, 'vencimiento': 'viernes'},
+    'USO': {'min': 0.10, 'max': 0.20, 'vencimiento': 'viernes'},
+    'GLD': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
+    'TNA': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
+    'XOM': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
+    'CVX': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
+    'PLTR': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
+    'BABA': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
+    'CMG': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
+    'SMCI': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
     'AVGO': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
-    'INTC': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'}
+    'CORZ': {'min': 0.10, 'max': 0.20, 'vencimiento': 'viernes'},
+    'BBAI': {'min': 0.10, 'max': 0.20, 'vencimiento': 'viernes'},
+    'SOUN': {'min': 0.10, 'max': 0.20, 'vencimiento': 'viernes'},
+    'LAC': {'min': 0.10, 'max': 0.20, 'vencimiento': 'viernes'},
+    'RKLB': {'min': 0.10, 'max': 0.20, 'vencimiento': 'viernes'},
+    'POWI': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
+    'CRWD': {'min': 0.60, 'max': 0.80, 'vencimiento': 'viernes'},
+    'IREN': {'min': 0.10, 'max': 0.20, 'vencimiento': 'viernes'},
+    'TIGO': {'min': 0.10, 'max': 0.20, 'vencimiento': 'viernes'},
+    'RR': {'min': 0.10, 'max': 0.20, 'vencimiento': 'viernes'}
 }
 
-# Configuración
-API_KEY = os.getenv('POLYGON_API_KEY')
+st.set_page_config(page_title="AG1VR", page_icon="🎯", layout="wide")
 
-if not API_KEY:
-    st.error("🔴 No se encontró POLYGON_API_KEY en las variables de entorno.")
-    st.stop()
-
-print(f"✅ API Key cargada (primeros 8 caracteres): {API_KEY[:8]}...")
-
-# Polygon REST Client
 try:
     from polygon import RESTClient
-    client = RESTClient(api_key=API_KEY)
-except Exception as e:
-    st.error(f"Error al conectar con Polygon: {str(e)}")
-    st.info("💡 Ejecuta: pip install polygon-api-client")
-    st.stop()
+except ImportError:
+    st.warning("📦 Instalando polygon-api-client...")
+    os.system(f"{sys.executable} -m pip install polygon-api-client -q")
+    from polygon import RESTClient
 
-# Función para calcular fecha de vencimiento
-def calcular_fecha_vencimiento(fecha_actual, ticker):
-    """Calcula la fecha de vencimiento según el ticker"""
-    if ticker in ['SPY', 'QQQ']:
-        # Siguiente día hábil
-        fecha_venc = fecha_actual + timedelta(days=1)
-        while fecha_venc.weekday() >= 5:  # 5 = sábado, 6 = domingo
+API_KEY = os.getenv('POLYGON_API_KEY') or st.secrets.get("POLYGON_API_KEY")
+
+class AnalisisHistorico:
+    def __init__(self):
+        self.historial_file = "historial_operaciones.json"
+        self.resultados_file = "resultados_historicos.json"
+        self.cargar_historial()
+        self.cargar_resultados_historicos()
+    
+    def cargar_historial(self):
+        try:
+            with open(self.historial_file, 'r') as f:
+                self.historial = json.load(f)
+        except FileNotFoundError:
+            self.historial = {}
+    
+    def guardar_historial(self):
+        with open(self.historial_file, 'w') as f:
+            json.dump(self.historial, f, indent=2)
+    
+    def cargar_resultados_historicos(self):
+        try:
+            with open(self.resultados_file, 'r') as f:
+                self.resultados_historicos = json.load(f)
+        except FileNotFoundError:
+            self.resultados_historicos = []
+    
+    def guardar_resultados_historicos(self):
+        with open(self.resultados_file, 'w') as f:
+            json.dump(self.resultados_historicos, f, indent=2)
+    
+    def agregar_resultado(self, fecha, ticker, rsi, bb_position, ganancia_d1, ganancia_d2, prima_entrada, prima_max_d1, prima_max_d2, strike):
+        """Agrega un resultado histórico verificando que sea una vela roja válida"""
+        resultado = {
+            'fecha': fecha,
+            'ticker': ticker,
+            'rsi': rsi,
+            'bb_position': bb_position,
+            'ganancia_d1': ganancia_d1,
+            'ganancia_d2': ganancia_d2,
+            'prima_entrada': prima_entrada,
+            'prima_max_d1': prima_max_d1,
+            'prima_max_d2': prima_max_d2,
+            'strike': strike,
+            'exitoso_d1': ganancia_d1 >= 100,
+            'exitoso_d2': ganancia_d2 >= 100
+        }
+        self.resultados_historicos.append(resultado)
+        self.guardar_resultados_historicos()
+    
+    def calcular_ganancia_historica(self, ticker, rsi, bb_position, fecha_excluir=None, usar_mediana=False):
+        """Calcula ganancia histórica promedio de días similares"""
+        dias_similares = []
+        dias_similares_detalle = []  # Para mostrar en modal
+        
+        # AMPLIAR RANGOS para encontrar más días similares
+        rsi_rango = 10
+        bb_rango = 0.20
+        
+        print(f"\n🔍 BUSCANDO DÍAS SIMILARES PARA {ticker}")
+        print(f"   RSI objetivo: {rsi:.1f} (rango: {rsi-rsi_rango:.1f} - {rsi+rsi_rango:.1f})")
+        print(f"   BB objetivo: {bb_position:.2f} (rango: {bb_position-bb_rango:.2f} - {bb_position+bb_rango:.2f})")
+        print(f"   Fecha a excluir: {fecha_excluir}")
+        print(f"   Total registros históricos: {len(self.resultados_historicos)}")
+        
+        for resultado in self.resultados_historicos:
+            if fecha_excluir and resultado.get('fecha') == fecha_excluir:
+                print(f"   ⏭️  Saltando fecha actual: {resultado.get('fecha')}")
+                continue
+                
+            if resultado['ticker'] == ticker:
+                rsi_hist = resultado['rsi']
+                bb_hist = resultado['bb_position']
+                
+                rsi_similar = abs(rsi_hist - rsi) <= rsi_rango
+                bb_similar = abs(bb_hist - bb_position) <= bb_rango
+                
+                if rsi_similar and bb_similar:
+                    ganancia = resultado['ganancia_d1']
+                    if ganancia > 0:
+                        dias_similares.append(ganancia)
+                        dias_similares_detalle.append(resultado)
+                        print(f"   ✅ {resultado['fecha']}: RSI={rsi_hist:.1f}, BB={bb_hist:.2f} → D1={ganancia:.1f}%")
+        
+        if len(dias_similares) == 0:
+            print(f"   ❌ No se encontraron días similares")
+            return None, 0, []
+        
+        if usar_mediana:
+            ganancia_hist = np.median(dias_similares)
+        else:
+            ganancia_hist = np.mean(dias_similares)
+        
+        print(f"   📊 Ganancias encontradas: {dias_similares}")
+        print(f"   📈 {'Mediana' if usar_mediana else 'Promedio'}: {ganancia_hist:.0f}%")
+        print(f"   📌 Total días similares: {len(dias_similares)}")
+        
+        return ganancia_hist, len(dias_similares), dias_similares_detalle
+    
+    def agregar_operacion(self, ticker, rsi, bb_position, resultado, timestamp):
+        if ticker not in self.historial:
+            self.historial[ticker] = []
+        
+        self.historial[ticker].append({
+            'timestamp': timestamp,
+            'rsi': rsi,
+            'bb_position': bb_position,
+            'resultado': resultado,
+            'exitosa': resultado > 0
+        })
+        self.guardar_historial()
+
+def calcular_fecha_vencimiento(fecha_senal, ticker):
+    """Calcula la fecha de vencimiento correcta para el ticker"""
+    rango = RANGOS_PRIMA.get(ticker, {})
+    tipo_vencimiento = rango.get('vencimiento', 'viernes')
+    
+    if tipo_vencimiento == 'siguiente_dia':
+        fecha_venc = fecha_senal + timedelta(days=1)
+        while fecha_venc.weekday() >= 5:
             fecha_venc += timedelta(days=1)
+        print(f"   [VENC] {ticker} siguiente_dia: {fecha_senal} → {fecha_venc} ({fecha_venc.strftime('%A')})")
         return fecha_venc
     else:
-        # Próximo viernes
-        dias_hasta_viernes = (4 - fecha_actual.weekday()) % 7
-        if dias_hasta_viernes == 0:  # Si hoy es viernes
-            dias_hasta_viernes = 7  # Próximo viernes
-        fecha_venc = fecha_actual + timedelta(days=dias_hasta_viernes)
+        dia_semana = fecha_senal.weekday()
+        if dia_semana <= 4:
+            dias_hasta_viernes = 4 - dia_semana
+            # ✅ CORRECCIÓN CRÍTICA: Si HOY es viernes (dias_hasta_viernes=0), 
+            # buscar opciones que vencen HOY mismo (0DTE), NO el siguiente viernes
+            # Esto es ESENCIAL para opciones de corto plazo que buscan 100%+ en 1 día
+            # ANTES: if dias_hasta_viernes == 0: dias_hasta_viernes = 7  ❌
+            # AHORA: Mantener dias_hasta_viernes = 0 para buscar opciones 0DTE ✅
+        else:
+            dias_hasta_viernes = 5 if dia_semana == 5 else 4
+        fecha_venc = fecha_senal + timedelta(days=dias_hasta_viernes)
+        print(f"   [VENC] {ticker} viernes: {fecha_senal} ({fecha_senal.strftime('%A')}) → {fecha_venc} ({fecha_venc.strftime('%A')}) [+{dias_hasta_viernes}d]")
         return fecha_venc
 
 def buscar_contratos_disponibles(client, ticker, fecha_vencimiento):
@@ -143,61 +256,73 @@ def buscar_contratos_disponibles(client, ticker, fecha_vencimiento):
             if 'status' in data:
                 print(f"📌 Status: {data['status']}")
             
-            contratos = data.get('results', [])
+            if 'message' in data:
+                print(f"📌 Message: {data['message']}")
             
-            if contratos:
-                print(f"✅ {len(contratos)} contratos encontrados")
-                return contratos
+            if 'results' in data and len(data['results']) > 0:
+                print(f"✅ Encontrados {len(data['results'])} contratos para {fecha_venc_str}")
+                return data['results']
             else:
-                print("⚠️ No hay contratos en esa fecha exacta, buscando fechas cercanas...")
-                
-                # INTENTO 2: Búsqueda más amplia (sin fecha específica)
-                fecha_actual = fecha_vencimiento
-                contratos_totales = []
-                
-                for i in range(7):  # Buscar en los próximos 7 días
-                    fecha_busqueda = fecha_actual + timedelta(days=i)
-                    fecha_busqueda_str = fecha_busqueda.strftime('%Y-%m-%d')
-                    
-                    params_amplio = {
-                        'underlying_ticker': ticker,
-                        'contract_type': 'put',
-                        'expiration_date': fecha_busqueda_str,
-                        'limit': 1000,
-                        'apiKey': API_KEY
-                    }
-                    
-                    response_amplio = requests.get(url, params=params_amplio)
-                    
-                    if response_amplio.status_code == 200:
-                        data_amplio = response_amplio.json()
-                        contratos_dia = data_amplio.get('results', [])
-                        if contratos_dia:
-                            print(f"  ✅ {fecha_busqueda_str}: {len(contratos_dia)} contratos")
-                            contratos_totales.extend(contratos_dia)
-                    
-                    time.sleep(0.1)  # Rate limiting
-                
-                if contratos_totales:
-                    print(f"✅ Total: {len(contratos_totales)} contratos encontrados")
-                    return contratos_totales
-                else:
-                    print("❌ No se encontraron contratos en ninguna fecha cercana")
-                    return []
+                print(f"⚠️  Response tiene 'results' pero vacío o no existe")
+                print(f"⚠️  Contenido completo: {data}")
         
+        print(f"⚠️  No hay contratos para {fecha_venc_str}")
+        
+        # INTENTO 2: Buscar en rango ±7 días (más agresivo)
+        fecha_desde = (fecha_vencimiento - timedelta(days=7)).strftime('%Y-%m-%d')
+        fecha_hasta = (fecha_vencimiento + timedelta(days=7)).strftime('%Y-%m-%d')
+        
+        print(f"🔄 Buscando en rango: {fecha_desde} a {fecha_hasta}")
+        
+        params = {
+            'underlying_ticker': ticker,
+            'contract_type': 'put',
+            'expiration_date.gte': fecha_desde,
+            'expiration_date.lte': fecha_hasta,
+            'limit': 1000,
+            'apiKey': API_KEY
+        }
+        
+        response = requests.get(url, params=params)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if 'results' in data and len(data['results']) > 0:
+                print(f"✅ Encontrados {len(data['results'])} contratos en rango ±7 días")
+                return data['results']
+        
+        # INTENTO 3: Buscar en rango ±30 días (muy agresivo - último recurso)
+        fecha_desde = (fecha_vencimiento - timedelta(days=30)).strftime('%Y-%m-%d')
+        fecha_hasta = (fecha_vencimiento + timedelta(days=30)).strftime('%Y-%m-%d')
+        
+        print(f"🔄 Último intento - buscando en rango: {fecha_desde} a {fecha_hasta}")
+        
+        params = {
+            'underlying_ticker': ticker,
+            'contract_type': 'put',
+            'expiration_date.gte': fecha_desde,
+            'expiration_date.lte': fecha_hasta,
+            'limit': 1000,
+            'apiKey': API_KEY
+        }
+        
+        response = requests.get(url, params=params)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if 'results' in data and len(data['results']) > 0:
+                print(f"⚠️  Encontrados {len(data['results'])} contratos en rango ±30 días (lejos del objetivo)")
+                return data['results']
+        
+        print(f"❌ NO SE ENCONTRARON CONTRATOS para {ticker} en ningún rango")
         return []
-            
+        
     except Exception as e:
-        print(f"❌ Error buscando contratos: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        print(f"❌ ERROR buscando contratos: {str(e)}")
         return []
 
-def calcular_ganancia_real_opcion_v2(client, ticker, fecha, precio_stock):
-    """
-    NUEVA VERSIÓN: Calcula ganancia usando una aproximación basada en Greeks y volatilidad
-    cuando no hay datos históricos de agregados disponibles (plan Starter)
-    """
+def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
+    """Calcula la ganancia real de la opción PUT para Día 1 y Día 2"""
     try:
         if ticker not in RANGOS_PRIMA:
             return {
@@ -218,9 +343,9 @@ def calcular_ganancia_real_opcion_v2(client, ticker, fecha, precio_stock):
         
         fecha_str = fecha.strftime('%Y-%m-%d')
         
-        # Calcular día siguiente saltando fines de semana
+        # CORRECTO: Calcular día siguiente saltando fines de semana
         fecha_dia_siguiente = fecha + timedelta(days=1)
-        while fecha_dia_siguiente.weekday() >= 5:
+        while fecha_dia_siguiente.weekday() >= 5:  # 5 = sábado, 6 = domingo
             fecha_dia_siguiente += timedelta(days=1)
         fecha_dia_siguiente_str = fecha_dia_siguiente.strftime('%Y-%m-%d')
         
@@ -230,10 +355,11 @@ def calcular_ganancia_real_opcion_v2(client, ticker, fecha, precio_stock):
         print(f"Precio stock: ${precio_stock:.2f}")
         print(f"Strike objetivo (3% OTM): ${strike_objetivo:.2f}")
         
-        # Buscar contratos disponibles
+        print("\n🔍 Buscando contratos disponibles...")
         contratos = buscar_contratos_disponibles(client, ticker, fecha_vencimiento)
         
         if not contratos or len(contratos) == 0:
+            print(f"❌ No hay contratos PUT disponibles para {ticker}")
             return {
                 'ganancia_pct': 0,
                 'ganancia_dia_siguiente': 0,
@@ -246,24 +372,32 @@ def calcular_ganancia_real_opcion_v2(client, ticker, fecha, precio_stock):
                 'mensaje': 'Sin opciones disponibles'
             }
         
-        # Agrupar por fecha de vencimiento
-        contratos_por_fecha = {}
-        for contrato in contratos:
-            fecha_exp = contrato.get('expiration_date', '')
-            if fecha_exp not in contratos_por_fecha:
-                contratos_por_fecha[fecha_exp] = []
-            contratos_por_fecha[fecha_exp].append(contrato)
+        print(f"✅ Encontrados {len(contratos)} contratos PUT")
         
-        # Seleccionar contratos más cercanos
+        from collections import defaultdict
+        contratos_por_fecha = defaultdict(list)
+        for contrato in contratos:
+            exp_date = contrato.get('expiration_date', '')
+            contratos_por_fecha[exp_date].append(contrato)
+        
         fechas_disponibles = sorted(contratos_por_fecha.keys())
-        if fecha_vencimiento.strftime('%Y-%m-%d') in fechas_disponibles:
-            fecha_elegida = fecha_vencimiento.strftime('%Y-%m-%d')
+        fecha_elegida = None
+        
+        if len(fechas_disponibles) > 1:
+            if isinstance(fecha_vencimiento, datetime):
+                fecha_venc_date = fecha_vencimiento.date()
+            else:
+                fecha_venc_date = fecha_vencimiento
+            
+            fecha_elegida = min(
+                fechas_disponibles, 
+                key=lambda x: abs((datetime.strptime(x, '%Y-%m-%d').date() - fecha_venc_date).days)
+            )
             contratos = contratos_por_fecha[fecha_elegida]
         else:
             fecha_elegida = fechas_disponibles[0]
             contratos = contratos_por_fecha[fecha_elegida]
         
-        # Buscar el strike más cercano
         mejor_contrato = None
         menor_diferencia = float('inf')
         
@@ -276,6 +410,7 @@ def calcular_ganancia_real_opcion_v2(client, ticker, fecha, precio_stock):
                 mejor_contrato = contrato
         
         if not mejor_contrato:
+            print("❌ No se encontró strike cercano")
             return {
                 'ganancia_pct': 0,
                 'ganancia_dia_siguiente': 0,
@@ -294,152 +429,308 @@ def calcular_ganancia_real_opcion_v2(client, ticker, fecha, precio_stock):
         print(f"📌 Contrato seleccionado: {option_ticker}")
         print(f"📌 Strike real: ${strike_real}")
         
-        # NUEVA ESTRATEGIA: Usar aproximación basada en la volatilidad del subyacente
-        # y la distancia al strike para estimar las primas
-        
-        # 1. Obtener volatilidad del subyacente (últimos 30 días)
-        fecha_30_dias_atras = fecha - timedelta(days=30)
-        
         try:
-            # Obtener datos históricos del subyacente
-            stock_aggs = client.get_aggs(
-                ticker=ticker,
-                multiplier=1,
-                timespan="day",
-                from_=fecha_30_dias_atras.strftime('%Y-%m-%d'),
+            # ✅ CORRECCIÓN: Usar agregados de 30 MINUTOS (compatible con plan Starter)
+            option_aggs_dia1 = client.get_aggs(
+                ticker=option_ticker,
+                multiplier=30,  # ✅ 30 minutos
+                timespan="minute",
+                from_=fecha_str,
                 to=fecha_str,
-                limit=50
+                limit=50000
             )
             
-            if stock_aggs and len(stock_aggs) > 10:
-                # Calcular volatilidad histórica
-                precios_cierre = [agg.close for agg in stock_aggs]
-                rendimientos = []
-                for i in range(1, len(precios_cierre)):
-                    rendimiento = np.log(precios_cierre[i] / precios_cierre[i-1])
-                    rendimientos.append(rendimiento)
+            print(f"📊 Día 1: {len(option_aggs_dia1) if option_aggs_dia1 else 0} registros de 30min")
+            
+            if not option_aggs_dia1 or len(option_aggs_dia1) == 0:
+                print(f"❌ NO SE ENCONTRARON DATOS para {option_ticker}")
+                print("🔄 Usando estimación basada en volatilidad del subyacente...")
                 
-                volatilidad_diaria = np.std(rendimientos)
-                volatilidad_anual = volatilidad_diaria * np.sqrt(252)  # 252 días de trading
+                # NUEVA ESTRATEGIA: Estimar primas usando volatilidad del subyacente
+                # Compatible con plan Starter que no tiene datos históricos de opciones
                 
-                print(f"📊 Volatilidad anual calculada: {volatilidad_anual:.2%}")
-            else:
-                # Volatilidad por defecto según el ticker
-                volatilidades_default = {
-                    'SPY': 0.15,
-                    'QQQ': 0.20,
-                    'AAPL': 0.25,
-                    'AMD': 0.40,
-                    'AMZN': 0.25,
-                    'META': 0.30,
-                    'MSFT': 0.22,
-                    'NVDA': 0.45,
-                    'TESLA': 0.50,
-                    'GLD': 0.12,
-                    'GOOGL': 0.25,
-                    'GOOG': 0.25,
-                    'BRK.B': 0.18,
-                    'JPM': 0.22,
-                    'V': 0.20,
-                    'MA': 0.22,
-                    'UNH': 0.20,
-                    'HD': 0.22,
-                    'DIS': 0.28,
-                    'ADBE': 0.30,
-                    'CRM': 0.32,
-                    'NFLX': 0.35,
-                    'PFE': 0.25,
-                    'KO': 0.16,
-                    'PEP': 0.16,
-                    'WMT': 0.20,
-                    'BAC': 0.25,
-                    'XOM': 0.28,
-                    'CVX': 0.28,
-                    'ABBV': 0.22,
-                    'COST': 0.20,
-                    'AVGO': 0.30,
-                    'INTC': 0.35
+                # 1. Obtener volatilidad histórica del subyacente
+                fecha_30_dias_atras = fecha - timedelta(days=30)
+                volatilidad_anual = 0.25  # Por defecto
+                
+                try:
+                    stock_aggs = client.get_aggs(
+                        ticker=ticker,
+                        multiplier=1,
+                        timespan="day", 
+                        from_=fecha_30_dias_atras.strftime('%Y-%m-%d'),
+                        to=fecha_str,
+                        limit=50
+                    )
+                    
+                    if stock_aggs and len(stock_aggs) > 10:
+                        precios_cierre = [agg.close for agg in stock_aggs]
+                        rendimientos = []
+                        for i in range(1, len(precios_cierre)):
+                            rendimiento = np.log(precios_cierre[i] / precios_cierre[i-1])
+                            rendimientos.append(rendimiento)
+                        
+                        volatilidad_diaria = np.std(rendimientos)
+                        volatilidad_anual = volatilidad_diaria * np.sqrt(252)
+                        print(f"📊 Volatilidad anual calculada: {volatilidad_anual:.2%}")
+                    else:
+                        # Volatilidades por defecto según ticker
+                        volatilidades_default = {
+                            'SPY': 0.15, 'QQQ': 0.20, 'AAPL': 0.25, 'AMD': 0.40,
+                            'AMZN': 0.25, 'META': 0.30, 'MSFT': 0.22, 'NVDA': 0.45,
+                            'TSLA': 0.50, 'GLD': 0.12, 'GOOGL': 0.25, 'NFLX': 0.35,
+                            'MRNA': 0.60, 'BAC': 0.25, 'SLV': 0.30, 'USO': 0.40,
+                            'TNA': 0.45, 'XOM': 0.28, 'CVX': 0.28, 'PLTR': 0.55,
+                            'BABA': 0.35, 'CMG': 0.25, 'SMCI': 0.60, 'AVGO': 0.30,
+                            'CORZ': 0.70, 'BBAI': 0.65, 'SOUN': 0.60, 'LAC': 0.55,
+                            'RKLB': 0.50, 'POWI': 0.35, 'CRWD': 0.40, 'IREN': 0.65,
+                            'TIGO': 0.45, 'RR': 0.50
+                        }
+                        volatilidad_anual = volatilidades_default.get(ticker, 0.30)
+                        print(f"⚠️ Usando volatilidad por defecto: {volatilidad_anual:.2%}")
+                except:
+                    pass
+                
+                # 2. Calcular tiempo hasta vencimiento
+                dias_hasta_vencimiento = (fecha_vencimiento - fecha).days
+                tiempo_hasta_vencimiento = dias_hasta_vencimiento / 365.0
+                
+                # 3. Estimar prima usando modelo simplificado
+                moneyness = precio_stock / strike_real
+                
+                if moneyness > 1:  # OTM
+                    otm_factor = 1 - moneyness
+                    prima_base = precio_stock * volatilidad_anual * np.sqrt(tiempo_hasta_vencimiento) * 0.4
+                    prima_estimada = prima_base * np.exp(otm_factor * 3)
+                    
+                    if dias_hasta_vencimiento <= 2:
+                        prima_minima = precio_stock * 0.001 * (1 + volatilidad_anual)
+                        prima_estimada = max(prima_estimada, prima_minima)
+                else:
+                    prima_estimada = max(strike_real - precio_stock, 0) + precio_stock * volatilidad_anual * np.sqrt(tiempo_hasta_vencimiento) * 0.4
+                
+                # 4. Ajustar prima al rango esperado
+                prima_entrada = min(max(prima_estimada, rango['min']), rango['max'])
+                
+                # 5. Estimar variación intradiaria
+                factor_variacion = 1 + (volatilidad_anual * 0.5)
+                prima_maxima_dia1 = prima_estimada * factor_variacion
+                
+                # 6. Estimar prima día 2 con decaimiento theta
+                theta_decay = 1 / dias_hasta_vencimiento if dias_hasta_vencimiento > 0 else 0.5
+                prima_maxima_dia2 = prima_maxima_dia1 * (1 - theta_decay * 0.3)
+                
+                # 7. Calcular ganancias estimadas
+                ganancia_dia1 = ((prima_maxima_dia1 - prima_entrada) / prima_entrada * 100) if prima_entrada > 0 else 0
+                ganancia_dia2 = ((prima_maxima_dia2 - prima_entrada) / prima_entrada * 100) if prima_entrada > 0 else 0
+                
+                exito_dia1 = '✅' if ganancia_dia1 >= 100 else '❌'
+                exito_dia2 = '✅' if ganancia_dia2 >= 100 else '❌'
+                
+                print(f"\n📊 ESTIMACIÓN (sin datos históricos):")
+                print(f"  Prima entrada estimada: ${prima_entrada:.2f}")
+                print(f"  Prima máxima D1 estimada: ${prima_maxima_dia1:.2f}")
+                print(f"  Prima máxima D2 estimada: ${prima_maxima_dia2:.2f}")
+                print(f"  Ganancia D1 estimada: {ganancia_dia1:.1f}% {exito_dia1}")
+                print(f"  Ganancia D2 estimada: {ganancia_dia2:.1f}% {exito_dia2}")
+                
+                return {
+                    'ganancia_pct': round(ganancia_dia1, 1),
+                    'ganancia_dia_siguiente': round(ganancia_dia2, 1),
+                    'exito': exito_dia1,
+                    'exito_dia2': exito_dia2,
+                    'strike': strike_real,
+                    'prima_entrada': round(prima_entrada, 2),
+                    'prima_maxima': round(prima_maxima_dia1, 2),
+                    'prima_maxima_dia2': round(prima_maxima_dia2, 2),
+                    'mensaje': f'ESTIMADO - D1: ${prima_entrada}→${prima_maxima_dia1:.2f}'
                 }
-                volatilidad_anual = volatilidades_default.get(ticker, 0.25)
-                print(f"⚠️ Usando volatilidad por defecto: {volatilidad_anual:.2%}")
-        except:
-            volatilidad_anual = 0.25  # Por defecto
             
-        # 2. Estimar prima usando aproximación Black-Scholes simplificada
-        # Para opciones PUT OTM de corto plazo
-        
-        dias_hasta_vencimiento = (fecha_vencimiento - fecha).days
-        tiempo_hasta_vencimiento = dias_hasta_vencimiento / 365.0
-        
-        # Distancia al strike (moneyness)
-        moneyness = precio_stock / strike_real
-        
-        # Prima aproximada (simplificación para PUT OTM)
-        if moneyness > 1:  # OTM
-            # Factor de decaimiento por estar OTM
-            otm_factor = 1 - moneyness
+            precios_dia1 = []
+            for agg in option_aggs_dia1:
+                precios_dia1.append({
+                    'open': agg.open,
+                    'high': agg.high,
+                    'low': agg.low,
+                    'close': agg.close
+                })
             
-            # Prima base usando volatilidad y tiempo
-            prima_base = precio_stock * volatilidad_anual * np.sqrt(tiempo_hasta_vencimiento) * 0.4
+            # ✅ CORREGIDO: Buscar prima EN TODOS LOS PRECIOS del día (open, high, low, close)
+            prima_entrada = None
+            prima_maxima_dia1 = max([p['high'] for p in precios_dia1])
             
-            # Ajustar por qué tan OTM está
-            prima_estimada = prima_base * np.exp(otm_factor * 3)
+            print(f"Rango objetivo: ${rango['min']:.2f} - ${rango['max']:.2f}")
+            print(f"Prima apertura (primera vela): ${precios_dia1[0]['open']:.2f}")
             
-            # Para opciones muy cortas (1-2 días), usar un mínimo
-            if dias_hasta_vencimiento <= 2:
-                prima_minima = precio_stock * 0.001 * (1 + volatilidad_anual)
-                prima_estimada = max(prima_estimada, prima_minima)
-        else:
-            # ITM o ATM - usar aproximación diferente
-            prima_estimada = max(strike_real - precio_stock, 0) + precio_stock * volatilidad_anual * np.sqrt(tiempo_hasta_vencimiento) * 0.4
-        
-        print(f"💰 Prima estimada: ${prima_estimada:.2f}")
-        
-        # 3. Simular variación de la prima durante el día
-        # Las opciones típicamente tienen mayor prima al inicio del día y decaen
-        
-        # Prima de entrada (asumimos entrada con prima en el rango)
-        prima_entrada = min(max(prima_estimada, rango['min']), rango['max'])
-        
-        # Prima máxima del día (típicamente 10-30% más alta que la estimada)
-        factor_variacion = 1 + (volatilidad_anual * 0.5)  # Mayor volatilidad = mayor variación
-        prima_maxima = prima_estimada * factor_variacion
-        
-        # Prima máxima día 2 (con decaimiento theta)
-        theta_decay = 1 / dias_hasta_vencimiento if dias_hasta_vencimiento > 0 else 0.5
-        prima_maxima_dia2 = prima_maxima * (1 - theta_decay * 0.3)  # 30% del theta
-        
-        # 4. Calcular ganancias
-        ganancia_pct = ((prima_maxima - prima_entrada) / prima_entrada * 100) if prima_entrada > 0 else 0
-        ganancia_dia_siguiente = ((prima_maxima_dia2 - prima_entrada) / prima_entrada * 100) if prima_entrada > 0 else 0
-        
-        # Determinar éxito
-        exito = '✅' if ganancia_pct >= 20 else '❌'
-        exito_dia2 = '✅' if ganancia_dia_siguiente >= 20 else '❌'
-        
-        print(f"\n📊 RESULTADOS ESTIMADOS:")
-        print(f"  Prima entrada: ${prima_entrada:.2f}")
-        print(f"  Prima máxima día 1: ${prima_maxima:.2f}")
-        print(f"  Prima máxima día 2: ${prima_maxima_dia2:.2f}")
-        print(f"  Ganancia día 1: {ganancia_pct:.1f}%")
-        print(f"  Ganancia día 2: {ganancia_dia_siguiente:.1f}%")
-        
-        return {
-            'ganancia_pct': round(ganancia_pct, 1),
-            'ganancia_dia_siguiente': round(ganancia_dia_siguiente, 1),
-            'exito': exito,
-            'exito_dia2': exito_dia2,
-            'strike': strike_real,
-            'prima_entrada': round(prima_entrada, 2),
-            'prima_maxima': round(prima_maxima, 2),
-            'prima_maxima_dia2': round(prima_maxima_dia2, 2),
-            'mensaje': 'Estimado (sin datos históricos)'
-        }
+            # 1. Buscar la PRIMERA prima que esté dentro del rango en CUALQUIER momento del día
+            print("🔍 Buscando prima dentro del rango en TODOS los precios...")
+            
+            prima_encontrada = False
+            for i, p in enumerate(precios_dia1):
+                # Revisar TODOS los precios de la vela (open, high, low, close)
+                precios_vela = [p['open'], p['high'], p['low'], p['close']]
+                
+                for precio in precios_vela:
+                    if rango['min'] <= precio <= rango['max']:
+                        prima_entrada = precio
+                        prima_encontrada = True
+                        print(f"✅ Prima EN RANGO encontrada en vela {i}: ${prima_entrada:.2f}")
+                        break
+                
+                if prima_encontrada:
+                    break
+            
+            # 2. Si NO encontró prima en rango, buscar la MÁS CERCANA
+            if not prima_encontrada:
+                print("⚠️  No hay primas en rango exacto - buscando la más cercana...")
+                
+                # Recolectar TODOS los precios del día (open, high, low, close de todas las velas)
+                todos_los_precios = []
+                for p in precios_dia1:
+                    todos_los_precios.extend([p['open'], p['high'], p['low'], p['close']])
+                
+                print(f"📊 Total de precios recolectados: {len(todos_los_precios)}")
+                print(f"📊 Rango de precios: ${min(todos_los_precios):.2f} - ${max(todos_los_precios):.2f}")
+                
+                rango_medio = (rango['min'] + rango['max']) / 2
+                
+                # Encontrar la prima más cercana al centro del rango
+                prima_mas_cercana = min(todos_los_precios, key=lambda x: abs(x - rango_medio))
+                
+                print(f"🎯 Rango objetivo: ${rango['min']:.2f} - ${rango['max']:.2f}")
+                print(f"🎯 Centro del rango: ${rango_medio:.2f}")
+                print(f"🎯 Prima más cercana encontrada: ${prima_mas_cercana:.2f}")
+                print(f"🎯 Diferencia al centro: ${abs(prima_mas_cercana - rango_medio):.2f}")
+                
+                # CRÍTICO: Solo aceptar si está dentro del 300% del ancho del rango (más flexible)
+                diferencia_permitida = (rango['max'] - rango['min']) * 3.0
+                
+                print(f"🎯 Diferencia máxima permitida: ${diferencia_permitida:.2f}")
+                
+                if abs(prima_mas_cercana - rango_medio) <= diferencia_permitida:
+                    prima_entrada = prima_mas_cercana
+                    print(f"✅ Prima MÁS CERCANA aceptada: ${prima_entrada:.2f} (diferencia: ${abs(prima_entrada - rango_medio):.2f})")
+                else:
+                    print(f"❌ Prima más cercana (${prima_mas_cercana:.2f}) está DEMASIADO LEJOS del rango - rechazada")
+                    print(f"❌ Diferencia: ${abs(prima_mas_cercana - rango_medio):.2f} > Permitido: ${diferencia_permitida:.2f}")
+                    return {
+                        'ganancia_pct': 0,
+                        'ganancia_dia_siguiente': 0,
+                        'exito': '❌',
+                        'exito_dia2': '❌',
+                        'strike': strike_real,
+                        'prima_entrada': 0,
+                        'prima_maxima': 0,
+                        'prima_maxima_dia2': 0,
+                        'mensaje': f'Prima fuera de rango: ${prima_mas_cercana:.2f} (esperado: ${rango["min"]:.2f}-${rango["max"]:.2f})'
+                    }
+            
+            if prima_entrada is None or prima_entrada == 0:
+                print("❌ No se pudo determinar prima de entrada válida")
+                return {
+                    'ganancia_pct': 0,
+                    'ganancia_dia_siguiente': 0,
+                    'exito': '❌',
+                    'exito_dia2': '❌',
+                    'strike': strike_real,
+                    'prima_entrada': 0,
+                    'prima_maxima': 0,
+                    'prima_maxima_dia2': 0,
+                    'mensaje': 'No se encontró prima válida'
+                }
+            
+            print(f"\n📊 CÁLCULO DÍA 1:")
+            print(f"  Prima entrada: ${prima_entrada:.2f}")
+            print(f"  Prima máxima día 1: ${prima_maxima_dia1:.2f}")
+            
+            if prima_entrada > 0:
+                ganancia_dia1 = ((prima_maxima_dia1 - prima_entrada) / prima_entrada) * 100
+            else:
+                ganancia_dia1 = 0
+            
+            exito_dia1 = '✅' if ganancia_dia1 >= 100 else '❌'
+            
+            print(f"  Ganancia día 1: {ganancia_dia1:.1f}% {exito_dia1}")
+            
+            # CÁLCULO DÍA 2
+            print(f"\n📊 CÁLCULO DÍA 2:")
+            print(f"🔄 Buscando datos del día siguiente: {fecha_dia_siguiente_str}...")
+            
+            option_aggs_dia2 = None
+            try:
+                # ✅ Usando agregados de 30 MINUTOS (igual que día 1)
+                option_aggs_dia2 = client.get_aggs(
+                    ticker=option_ticker,
+                    multiplier=30,  # ✅ 30 minutos
+                    timespan="minute",
+                    from_=fecha_dia_siguiente_str,
+                    to=fecha_dia_siguiente_str,
+                    limit=50000
+                )
+            except:
+                pass
+            
+            if option_aggs_dia2 and len(option_aggs_dia2) > 0:
+                print(f"  ✅ {len(option_aggs_dia2)} registros encontrados día 2")
+                
+                precios_dia2 = []
+                for agg in option_aggs_dia2:
+                    precios_dia2.append({
+                        'open': agg.open,
+                        'high': agg.high,
+                        'low': agg.low,
+                        'close': agg.close
+                    })
+                
+                prima_maxima_dia2 = max([p['high'] for p in precios_dia2])
+                
+                print(f"  Prima entrada (MISMA): ${prima_entrada:.2f}")
+                print(f"  Prima máxima día 2: ${prima_maxima_dia2:.2f}")
+                
+                if prima_entrada > 0:
+                    ganancia_dia2 = ((prima_maxima_dia2 - prima_entrada) / prima_entrada) * 100
+                else:
+                    ganancia_dia2 = 0
+                
+                exito_dia2 = '✅' if ganancia_dia2 >= 100 else '❌'
+                
+                print(f"  Ganancia día 2: {ganancia_dia2:.1f}% {exito_dia2}")
+            else:
+                print("  ❌ No hay datos del día siguiente")
+                prima_maxima_dia2 = 0
+                ganancia_dia2 = 0
+                exito_dia2 = '⚪'
+            
+            print("=" * 50)
+            
+            return {
+                'ganancia_pct': round(ganancia_dia1, 1),
+                'ganancia_dia_siguiente': round(ganancia_dia2, 1),
+                'exito': exito_dia1,
+                'exito_dia2': exito_dia2,
+                'strike': strike_real,
+                'prima_entrada': round(prima_entrada, 2),
+                'prima_maxima': round(prima_maxima_dia1, 2),
+                'prima_maxima_dia2': round(prima_maxima_dia2, 2),
+                'mensaje': f'D1: ${prima_entrada}→${prima_maxima_dia1} | D2: ${prima_maxima_dia2}'
+            }
+            
+        except Exception as e:
+            print(f"❌ ERROR API: {str(e)}")
+            return {
+                'ganancia_pct': 0,
+                'ganancia_dia_siguiente': 0,
+                'exito': '❌',
+                'exito_dia2': '❌',
+                'strike': strike_real,
+                'prima_entrada': 0,
+                'prima_maxima': 0,
+                'prima_maxima_dia2': 0,
+                'mensaje': f'API error: {str(e)[:30]}'
+            }
         
     except Exception as e:
-        print(f"❌ Error en cálculo: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        print(f"❌ ERROR GENERAL: {str(e)}")
         return {
             'ganancia_pct': 0,
             'ganancia_dia_siguiente': 0,
@@ -452,505 +743,29 @@ def calcular_ganancia_real_opcion_v2(client, ticker, fecha, precio_stock):
             'mensaje': f'Error: {str(e)}'
         }
 
-# Usar la nueva función en lugar de la anterior
-calcular_ganancia_real_opcion = calcular_ganancia_real_opcion_v2
-
-# ===== CONFIGURACIÓN DE PÁGINA =====
-st.set_page_config(
-    page_title="AG SPY System V90b - Mobile",
-    page_icon="📱",
-    layout="centered",
-    initial_sidebar_state="collapsed"
-)
-
-# ===== CSS OPTIMIZADO PARA MÓVIL =====
-st.markdown("""
-<style>
-    /* Diseño móvil */
-    .stApp {
-        background-color: #0e1117;
-        color: #e0e0e0;
-        padding: 0.5rem;
-        max-width: 100vw;
-    }
+def cargar_historico_4_meses(client, analisis, tickers):
+    """Carga histórico de 4 meses para todos los tickers"""
+    st.info("🔄 Cargando histórico de 4 meses... Esto puede tardar varios minutos.")
     
-    /* Métricas compactas para móvil */
-    [data-testid="metric-container"] {
-        background-color: #1e1e1e;
-        border: 1px solid #333;
-        padding: 0.4rem;
-        border-radius: 6px;
-        margin: 0.2rem 0;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
+    fecha_fin = datetime.now()
+    fecha_inicio = fecha_fin - timedelta(days=120)
     
-    [data-testid="metric-container"] > div {
-        padding: 0 !important;
-    }
-    
-    [data-testid="metric-container"] label {
-        font-size: 0.75rem !important;
-        color: #999;
-    }
-    
-    [data-testid="metric-container"] [data-testid="metric-value"] {
-        font-size: 1.2rem !important;
-        font-weight: bold;
-    }
-    
-    [data-testid="metric-container"] [data-testid="metric-delta"] {
-        font-size: 0.7rem !important;
-    }
-    
-    /* Tabs optimizados para móvil */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 0.3rem;
-        padding: 0.3rem;
-        background-color: #1e1e1e;
-        border-radius: 8px;
-        margin-bottom: 0.5rem;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.8rem;
-        background-color: #2a2a2a;
-        color: #ccc;
-        border: 1px solid #444;
-        border-radius: 6px;
-        white-space: nowrap;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background-color: #4CAF50 !important;
-        color: white !important;
-        border-color: #4CAF50 !important;
-        font-weight: bold;
-    }
-    
-    /* Tablas móviles */
-    .dataframe {
-        font-size: 0.7rem !important;
-        width: 100% !important;
-    }
-    
-    .dataframe th {
-        background-color: #2a2a2a !important;
-        color: #e0e0e0 !important;
-        padding: 0.3rem !important;
-        font-size: 0.7rem !important;
-        text-align: left !important;
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        border: 1px solid #444 !important;
-    }
-    
-    .dataframe td {
-        padding: 0.3rem !important;
-        background-color: #1e1e1e !important;
-        color: #ccc !important;
-        border: 1px solid #333 !important;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 100px;
-    }
-    
-    .dataframe tbody tr:hover {
-        background-color: #2a2a2a !important;
-    }
-    
-    /* Botones móviles */
-    .stButton > button {
-        width: 100%;
-        padding: 0.5rem;
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        font-size: 0.9rem;
-        font-weight: bold;
-        margin: 0.3rem 0;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-    
-    .stButton > button:hover {
-        background-color: #45a049;
-        transform: translateY(-1px);
-    }
-    
-    /* Inputs móviles */
-    .stSelectbox, .stDateInput, .stNumberInput {
-        margin: 0.3rem 0;
-    }
-    
-    .stSelectbox > div > div, 
-    .stDateInput > div > div,
-    .stNumberInput > div > div {
-        background-color: #2a2a2a !important;
-        border: 1px solid #444 !important;
-        color: #e0e0e0 !important;
-        padding: 0.4rem !important;
-        font-size: 0.85rem !important;
-    }
-    
-    /* Headers móviles */
-    h1, h2, h3 {
-        color: #4CAF50 !important;
-        margin: 0.5rem 0 !important;
-    }
-    
-    h1 { font-size: 1.3rem !important; }
-    h2 { font-size: 1.1rem !important; }
-    h3 { font-size: 0.95rem !important; }
-    
-    /* Alertas móviles */
-    .stAlert {
-        padding: 0.5rem;
-        margin: 0.5rem 0;
-        border-radius: 6px;
-        font-size: 0.8rem;
-    }
-    
-    /* Expanders móviles */
-    .streamlit-expanderHeader {
-        background-color: #2a2a2a !important;
-        border: 1px solid #444 !important;
-        border-radius: 6px !important;
-        padding: 0.5rem !important;
-        font-size: 0.85rem !important;
-    }
-    
-    /* Sidebar para móvil (si se usa) */
-    section[data-testid="stSidebar"] {
-        width: 80% !important;
-        background-color: #1a1a1a;
-    }
-    
-    /* Progress bar */
-    .stProgress > div > div > div > div {
-        background-color: #4CAF50 !important;
-    }
-    
-    /* Responsive para pantallas pequeñas */
-    @media (max-width: 480px) {
-        .stApp { padding: 0.3rem; }
-        [data-testid="metric-container"] { padding: 0.3rem; }
-        .dataframe { font-size: 0.65rem !important; }
-        .dataframe td { max-width: 80px; }
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# ===== FUNCIONES PRINCIPALES =====
-def analizar_ticker_historico(ticker):
-    """Análisis histórico de un ticker con 20 días previos a cada señal alcista"""
-    
-    hoy = datetime.now().date()
-    fecha_inicio = hoy - timedelta(days=365)  # 1 año de historia
     fecha_desde = fecha_inicio.strftime('%Y-%m-%d')
-    fecha_hasta = hoy.strftime('%Y-%m-%d')
+    fecha_hasta = fecha_fin.strftime('%Y-%m-%d')
     
-    # Progress bar
+    st.write(f"📅 Buscando datos desde {fecha_desde} hasta {fecha_hasta}")
+    
     progress_bar = st.progress(0)
     status_text = st.empty()
     
-    try:
-        status_text.text(f"📥 Descargando datos de {ticker}...")
-        progress_bar.progress(10)
-        
-        # Obtener datos históricos
-        aggs = client.get_aggs(
-            ticker=ticker,
-            multiplier=1,
-            timespan="day",
-            from_=fecha_desde,
-            to=fecha_hasta,
-            limit=5000
-        )
-        
-        if not aggs or len(aggs) < 20:
-            st.error(f"❌ Datos insuficientes para {ticker}")
-            return pd.DataFrame()
-        
-        progress_bar.progress(30)
-        status_text.text(f"🔍 Analizando {len(aggs)} días de datos...")
-        
-        # Convertir a DataFrame
-        data = []
-        for agg in aggs:
-            data.append({
-                'timestamp': pd.to_datetime(agg.timestamp, unit='ms'),
-                'open': agg.open,
-                'high': agg.high,
-                'low': agg.low,
-                'close': agg.close,
-                'volume': agg.volume
-            })
-        
-        df = pd.DataFrame(data)
-        df['timestamp'] = pd.to_datetime(df['timestamp'])
-        df.set_index('timestamp', inplace=True)
-        df = df.sort_index()
-        
-        # Calcular indicadores técnicos
-        progress_bar.progress(40)
-        status_text.text("📊 Calculando indicadores técnicos...")
-        
-        # RSI
-        delta = df['close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
-        df['RSI'] = 100 - (100 / (1 + rs))
-        
-        # Medias móviles
-        df['MA20'] = df['close'].rolling(window=20).mean()
-        df['MA50'] = df['close'].rolling(window=50).mean()
-        
-        # Bandas de Bollinger
-        df['BB_middle'] = df['close'].rolling(window=20).mean()
-        bb_std = df['close'].rolling(window=20).std()
-        df['BB_upper'] = df['BB_middle'] + (bb_std * 2)
-        df['BB_lower'] = df['BB_middle'] - (bb_std * 2)
-        
-        # ADX
-        df['high_low'] = df['high'] - df['low']
-        df['high_close'] = np.abs(df['high'] - df['close'].shift())
-        df['low_close'] = np.abs(df['low'] - df['close'].shift())
-        df['TR'] = df[['high_low', 'high_close', 'low_close']].max(axis=1)
-        df['ATR'] = df['TR'].rolling(window=14).mean()
-        
-        df['+DM'] = np.where((df['high'] - df['high'].shift()) > (df['low'].shift() - df['low']), 
-                             np.maximum(df['high'] - df['high'].shift(), 0), 0)
-        df['-DM'] = np.where((df['low'].shift() - df['low']) > (df['high'] - df['high'].shift()), 
-                             np.maximum(df['low'].shift() - df['low'], 0), 0)
-        
-        df['+DI'] = 100 * (df['+DM'].rolling(window=14).mean() / df['ATR'])
-        df['-DI'] = 100 * (df['-DM'].rolling(window=14).mean() / df['ATR'])
-        df['DX'] = 100 * np.abs((df['+DI'] - df['-DI']) / (df['+DI'] + df['-DI']))
-        df['ADX'] = df['DX'].rolling(window=14).mean()
-        
-        # OBV
-        df['OBV'] = (np.sign(df['close'].diff()) * df['volume']).fillna(0).cumsum()
-        
-        # Williams %R
-        high_14 = df['high'].rolling(window=14).max()
-        low_14 = df['low'].rolling(window=14).min()
-        df['Williams_%R'] = -100 * (high_14 - df['close']) / (high_14 - low_14)
-        
-        # MACD
-        ema_12 = df['close'].ewm(span=12, adjust=False).mean()
-        ema_26 = df['close'].ewm(span=26, adjust=False).mean()
-        df['MACD'] = ema_12 - ema_26
-        df['MACD_signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
-        df['MACD_histograma'] = df['MACD'] - df['MACD_signal']
-        
-        # Stochastic
-        low_14 = df['low'].rolling(window=14).min()
-        high_14 = df['high'].rolling(window=14).max()
-        df['%K'] = 100 * ((df['close'] - low_14) / (high_14 - low_14))
-        df['%D'] = df['%K'].rolling(window=3).mean()
-        
-        # Volatilidad
-        df['returns'] = df['close'].pct_change()
-        df['volatility_5'] = df['returns'].rolling(window=5).std() * np.sqrt(252)
-        df['volatility_20'] = df['returns'].rolling(window=20).std() * np.sqrt(252)
-        
-        # Detectar señales alcistas
-        progress_bar.progress(60)
-        status_text.text("🎯 Detectando señales alcistas...")
-        
-        # Condiciones para señal alcista
-        df['setup_alcista'] = (
-            (df['RSI'] < 30) &  # Sobreventa
-            (df['close'] <= df['BB_lower']) &  # Toca banda inferior
-            (df['ADX'] > 20) &  # Tendencia definida
-            (df['+DI'] > df['-DI']) &  # Presión compradora
-            (df['MACD_histograma'] > df['MACD_histograma'].shift()) &  # MACD mejorando
-            (df['%K'] < 20)  # Stochastic sobreventa
-        )
-        
-        # Buscar días con señal alcista
-        signal_dates = df[df['setup_alcista']].index
-        
-        if len(signal_dates) == 0:
-            st.warning(f"⚠️ No se encontraron señales alcistas fuertes en {ticker}")
-            progress_bar.progress(100)
-            return pd.DataFrame()
-        
-        # Analizar opciones PUT para cada señal
-        progress_bar.progress(80)
-        status_text.text("💰 Analizando opciones PUT en señales alcistas...")
-        
-        resultados = []
-        total_signals = len(signal_dates)
-        
-        for idx, signal_date in enumerate(signal_dates):
-            # Actualizar progreso
-            progress = 80 + (20 * (idx + 1) / total_signals)
-            progress_bar.progress(int(progress))
-            
-            # Obtener precio del stock en la señal
-            precio_stock = df.loc[signal_date, 'close']
-            
-            # Calcular ganancia de la opción PUT
-            resultado_opcion = calcular_ganancia_real_opcion(
-                client,
-                ticker,
-                signal_date.date(),
-                precio_stock
-            )
-            
-            # Obtener indicadores del día
-            indicadores = {
-                'RSI': df.loc[signal_date, 'RSI'],
-                'ADX': df.loc[signal_date, 'ADX'],
-                'Williams_%R': df.loc[signal_date, 'Williams_%R'],
-                'Volatilidad_20d': df.loc[signal_date, 'volatility_20'],
-                'Distancia_BB': ((df.loc[signal_date, 'close'] - df.loc[signal_date, 'BB_lower']) / 
-                                df.loc[signal_date, 'BB_lower'] * 100)
-            }
-            
-            resultados.append({
-                'Fecha': signal_date.date(),
-                'Precio_Stock': precio_stock,
-                'Strike_PUT': resultado_opcion['strike'],
-                'Prima_Entrada': resultado_opcion['prima_entrada'],
-                'Prima_Max_D1': resultado_opcion['prima_maxima'],
-                'Ganancia_D1_%': resultado_opcion['ganancia_pct'],
-                'Exito_D1': resultado_opcion['exito'],
-                'Prima_Max_D2': resultado_opcion['prima_maxima_dia2'],
-                'Ganancia_D2_%': resultado_opcion['ganancia_dia_siguiente'],
-                'Exito_D2': resultado_opcion['exito_dia2'],
-                'RSI': indicadores['RSI'],
-                'ADX': indicadores['ADX'],
-                'Williams_%R': indicadores['Williams_%R'],
-                'Volatilidad_20d': indicadores['Volatilidad_20d'],
-                'Distancia_BB_%': indicadores['Distancia_BB']
-            })
-        
-        progress_bar.progress(100)
-        status_text.text("✅ Análisis completado")
-        time.sleep(0.5)
-        progress_bar.empty()
-        status_text.empty()
-        
-        return pd.DataFrame(resultados)
-        
-    except Exception as e:
-        st.error(f"❌ Error analizando {ticker}: {str(e)}")
-        progress_bar.empty()
-        status_text.empty()
-        return pd.DataFrame()
-
-def realizar_backtest():
-    """Realiza backtest sobre múltiples tickers"""
-    
-    st.header("🔄 Backtest Histórico")
-    st.info("💡 Analiza señales alcistas históricas y el rendimiento de opciones PUT")
-    
-    # Selección de tickers
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        tickers_disponibles = list(RANGOS_PRIMA.keys())
-        tickers_seleccionados = st.multiselect(
-            "Selecciona tickers:",
-            tickers_disponibles,
-            default=['SPY', 'QQQ']
-        )
-    
-    with col2:
-        if st.button("🚀 Iniciar", use_container_width=True):
-            if not tickers_seleccionados:
-                st.error("❌ Selecciona al menos un ticker")
-                return
-            
-            # Contenedor para resultados
-            resultados_totales = []
-            
-            # Analizar cada ticker
-            for ticker in tickers_seleccionados:
-                with st.expander(f"📊 {ticker}", expanded=True):
-                    df_resultado = analizar_ticker_historico(ticker)
-                    
-                    if not df_resultado.empty:
-                        resultados_totales.append(df_resultado)
-                        
-                        # Mostrar métricas
-                        col1, col2, col3 = st.columns(3)
-                        
-                        total_signals = len(df_resultado)
-                        exitos_d1 = len(df_resultado[df_resultado['Exito_D1'] == '✅'])
-                        exitos_d2 = len(df_resultado[df_resultado['Exito_D2'] == '✅'])
-                        
-                        with col1:
-                            st.metric("Señales", total_signals)
-                        with col2:
-                            tasa_d1 = (exitos_d1/total_signals*100) if total_signals > 0 else 0
-                            st.metric("Éxito D1", f"{tasa_d1:.1f}%", f"{exitos_d1}/{total_signals}")
-                        with col3:
-                            tasa_d2 = (exitos_d2/total_signals*100) if total_signals > 0 else 0
-                            st.metric("Éxito D2", f"{tasa_d2:.1f}%", f"{exitos_d2}/{total_signals}")
-                        
-                        # Tabla de resultados
-                        if len(df_resultado) > 0:
-                            st.dataframe(
-                                df_resultado[['Fecha', 'Precio_Stock', 'Prima_Entrada', 
-                                            'Ganancia_D1_%', 'Exito_D1', 'Ganancia_D2_%', 'Exito_D2']],
-                                use_container_width=True,
-                                height=300
-                            )
-            
-            # Resumen global
-            if resultados_totales:
-                st.header("📊 Resumen Global")
-                
-                df_total = pd.concat(resultados_totales, ignore_index=True)
-                
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    st.metric("Total Señales", len(df_total))
-                
-                with col2:
-                    exitos_totales_d1 = len(df_total[df_total['Exito_D1'] == '✅'])
-                    tasa_global_d1 = (exitos_totales_d1/len(df_total)*100) if len(df_total) > 0 else 0
-                    st.metric("Tasa Éxito D1", f"{tasa_global_d1:.1f}%")
-                
-                with col3:
-                    exitos_totales_d2 = len(df_total[df_total['Exito_D2'] == '✅'])
-                    tasa_global_d2 = (exitos_totales_d2/len(df_total)*100) if len(df_total) > 0 else 0
-                    st.metric("Tasa Éxito D2", f"{tasa_global_d2:.1f}%")
-                
-                with col4:
-                    ganancia_promedio = df_total['Ganancia_D1_%'].mean()
-                    st.metric("Ganancia Prom D1", f"{ganancia_promedio:.1f}%")
-
-def buscar_oportunidades_hoy():
-    """Busca oportunidades para hoy"""
-    
-    st.header("🎯 Oportunidades de Hoy")
-    
-    # Obtener fecha actual
-    hoy = datetime.now().date()
-    fecha_desde = (hoy - timedelta(days=30)).strftime('%Y-%m-%d')
-    fecha_hasta = hoy.strftime('%Y-%m-%d')
-    
-    # Progress tracking
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    
-    # Analizar todos los tickers
-    tickers = list(RANGOS_PRIMA.keys())
-    total_tickers = len(tickers)
-    oportunidades = []
+    total_dias_analizados = 0
+    total_senales_detectadas = 0
+    total_guardados = 0
     
     for idx, ticker in enumerate(tickers):
-        progress = (idx + 1) / total_tickers
+        progress = (idx + 1) / len(tickers)
         progress_bar.progress(progress)
-        status_text.text(f"Analizando {ticker}... ({idx + 1}/{total_tickers})")
+        status_text.text(f"Procesando histórico de {ticker}... ({idx + 1}/{len(tickers)})")
         
         try:
             aggs = client.get_aggs(
@@ -959,11 +774,14 @@ def buscar_oportunidades_hoy():
                 timespan="day",
                 from_=fecha_desde,
                 to=fecha_hasta,
-                limit=30
+                limit=5000
             )
             
-            if not aggs:
+            if not aggs or len(aggs) < 20:
+                st.write(f"⚠️ {ticker}: Datos insuficientes ({len(aggs) if aggs else 0} días)")
                 continue
+            
+            st.write(f"📊 {ticker}: {len(aggs)} días descargados")
             
             data = []
             for agg in aggs:
@@ -976,169 +794,595 @@ def buscar_oportunidades_hoy():
                     'volume': agg.volume
                 })
             
-            df = pd.DataFrame(data).set_index('timestamp').sort_index()
+            df = pd.DataFrame(data)
+            df.set_index('timestamp', inplace=True)
+            df = df.sort_index()
             
-            # Calcular indicadores (simplificado)
-            # RSI
+            total_dias_analizados += len(df)
+            
+            # Calcular RSI
             delta = df['close'].diff()
             gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
             rs = gain / loss
-            rsi = 100 - (100 / (1 + rs))
+            df['RSI'] = 100 - (100 / (1 + rs))
             
-            # Bandas de Bollinger
-            ma20 = df['close'].rolling(window=20).mean()
-            std20 = df['close'].rolling(window=20).std()
-            bb_lower = ma20 - (std20 * 2)
+            # Calcular Bollinger Bands
+            df['SMA_20'] = df['close'].rolling(20).mean()
+            df['STD_20'] = df['close'].rolling(20).std()
+            df['BB_Upper'] = df['SMA_20'] + (df['STD_20'] * 2)
+            df['BB_Lower'] = df['SMA_20'] - (df['STD_20'] * 2)
+            df['BB_Position'] = (df['close'] - df['BB_Lower']) / (df['BB_Upper'] - df['BB_Lower'])
             
-            # Valores actuales
-            precio_actual = df['close'].iloc[-1]
-            rsi_actual = rsi.iloc[-1]
-            bb_lower_actual = bb_lower.iloc[-1]
+            senales_ticker = 0
+            guardados_ticker = 0
             
-            # Volatilidad
-            returns = df['close'].pct_change()
-            vol_20d = returns.rolling(window=20).std().iloc[-1] * np.sqrt(252)
-            
-            # Detectar oportunidad
-            if rsi_actual < 35 and precio_actual <= bb_lower_actual * 1.02:
-                # Calcular opción PUT
-                resultado_opcion = calcular_ganancia_real_opcion(
-                    client,
-                    ticker,
-                    hoy,
-                    precio_actual
+            for i in range(1, len(df)):
+                actual = df.iloc[i]
+                anterior = df.iloc[i-1]
+                
+                # VERIFICAR VELA ROJA
+                vela_roja = actual['close'] < anterior['close']
+                
+                if not vela_roja:
+                    continue
+                
+                senales_ticker += 1
+                
+                rsi_actual = actual['RSI'] if not pd.isna(actual['RSI']) else 50
+                bb_position_actual = actual['BB_Position'] if not pd.isna(actual['BB_Position']) else 0.5
+                
+                fecha_dia = actual.name.to_pydatetime()
+                fecha_str = fecha_dia.strftime('%Y-%m-%d')
+                
+                # VERIFICAR SI YA EXISTE - NO DUPLICAR
+                ya_existe = any(
+                    r['fecha'] == fecha_str and r['ticker'] == ticker 
+                    for r in analisis.resultados_historicos
                 )
                 
-                if resultado_opcion['prima_entrada'] > 0:
-                    oportunidades.append({
-                        'Ticker': ticker,
-                        'Precio': precio_actual,
-                        'RSI': rsi_actual,
-                        'Dist_BB_%': ((precio_actual - bb_lower_actual) / bb_lower_actual * 100),
-                        'Vol_20d': vol_20d,
-                        'Strike_PUT': resultado_opcion['strike'],
-                        'Prima': resultado_opcion['prima_entrada'],
-                        'Target_20%': resultado_opcion['prima_entrada'] * 1.20
-                    })
+                if ya_existe:
+                    continue
+                
+                ganancia_real = calcular_ganancia_real_opcion(
+                    client,
+                    ticker,
+                    fecha_dia,
+                    actual['open']
+                )
+                
+                if ganancia_real['ganancia_pct'] > 0:
+                    analisis.agregar_resultado(
+                        fecha=fecha_str,
+                        ticker=ticker,
+                        rsi=rsi_actual,
+                        bb_position=bb_position_actual,
+                        ganancia_d1=ganancia_real['ganancia_pct'],
+                        ganancia_d2=ganancia_real['ganancia_dia_siguiente'],
+                        prima_entrada=ganancia_real['prima_entrada'],
+                        prima_max_d1=ganancia_real['prima_maxima'],
+                        prima_max_d2=ganancia_real['prima_maxima_dia2'],
+                        strike=ganancia_real['strike']
+                    )
+                    guardados_ticker += 1
+                    total_guardados += 1
+            
+            total_senales_detectadas += senales_ticker
+            st.write(f"✅ {ticker}: {senales_ticker} señales | {guardados_ticker} guardadas")
             
         except Exception as e:
-            continue
+            st.write(f"❌ {ticker}: Error - {str(e)}")
     
     progress_bar.empty()
     status_text.empty()
     
-    # Mostrar resultados
-    if oportunidades:
-        st.success(f"✅ {len(oportunidades)} oportunidades encontradas")
-        
-        df_oportunidades = pd.DataFrame(oportunidades)
-        df_oportunidades = df_oportunidades.sort_values('RSI').reset_index(drop=True)
-        
-        # Formatear columnas
-        for col in ['Precio', 'Strike_PUT', 'Prima', 'Target_20%']:
-            if col in df_oportunidades.columns:
-                df_oportunidades[col] = df_oportunidades[col].round(2)
-        
-        for col in ['RSI', 'Dist_BB_%', 'Vol_20d']:
-            if col in df_oportunidades.columns:
-                df_oportunidades[col] = df_oportunidades[col].round(1)
-        
-        st.dataframe(df_oportunidades, use_container_width=True)
-        
-        # Detalles por ticker
-        st.subheader("📋 Detalles por Ticker")
-        for _, row in df_oportunidades.iterrows():
-            with st.expander(f"{row['Ticker']} - RSI: {row['RSI']:.1f}"):
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.write(f"**Precio Stock:** ${row['Precio']:.2f}")
-                    st.write(f"**Strike PUT:** ${row['Strike_PUT']:.2f}")
-                    st.write(f"**Volatilidad 20d:** {row['Vol_20d']:.1%}")
-                
-                with col2:
-                    st.write(f"**Prima entrada:** ${row['Prima']:.2f}")
-                    st.write(f"**Target (+20%):** ${row['Target_20%']:.2f}")
-                    st.write(f"**Distancia BB:** {row['Dist_BB_%']:.1f}%")
-                
-                # Tipo de opción según el ticker
-                tipo_venc = RANGOS_PRIMA[row['Ticker']]['vencimiento']
-                if tipo_venc == 'siguiente_dia':
-                    st.info("⏰ Opción de vencimiento al siguiente día hábil")
-                else:
-                    st.info("📅 Opción de vencimiento el próximo viernes")
-    else:
-        st.warning("⚠️ No se encontraron oportunidades claras para hoy")
-        st.info("💡 Los mercados no muestran condiciones de sobreventa significativa")
-
-# ===== INTERFAZ PRINCIPAL =====
-st.title("📱 AG SPY System V90b")
-st.caption("Sistema de Análisis de Opciones PUT - Versión Móvil")
-
-# Tabs principales
-tab1, tab2, tab3 = st.tabs(["🎯 Hoy", "📊 Backtest", "ℹ️ Info"])
-
-with tab1:
-    buscar_oportunidades_hoy()
-
-with tab2:
-    realizar_backtest()
-
-with tab3:
-    st.header("ℹ️ Información del Sistema")
+    st.success(f"""
+    ✅ Carga histórica completada!
     
-    st.subheader("📋 Rangos de Prima por Ticker")
-    
-    df_rangos = pd.DataFrame.from_dict(RANGOS_PRIMA, orient='index')
-    df_rangos.index.name = 'Ticker'
-    df_rangos['Rango'] = df_rangos.apply(lambda x: f"${x['min']:.2f} - ${x['max']:.2f}", axis=1)
-    df_rangos['Vencimiento'] = df_rangos['vencimiento'].replace({
-        'siguiente_dia': '1 día',
-        'viernes': 'Viernes'
-    })
-    
-    st.dataframe(
-        df_rangos[['Rango', 'Vencimiento']],
-        use_container_width=True
-    )
-    
-    st.subheader("📊 Indicadores Utilizados")
-    
-    indicadores = {
-        'RSI < 35': 'Sobreventa',
-        'Precio ≤ BB inferior': 'Extremo estadístico',
-        'ADX > 20': 'Tendencia definida',
-        'MACD mejorando': 'Momentum positivo',
-        'Stochastic < 20': 'Sobreventa extrema'
-    }
-    
-    for indicador, descripcion in indicadores.items():
-        st.write(f"• **{indicador}:** {descripcion}")
-    
-    st.subheader("🎯 Estrategia")
-    
-    st.write("""
-    1. **Identificar sobreventa:** RSI < 35 + toca banda inferior
-    2. **Comprar PUT OTM:** Strike ~3% por debajo del precio actual
-    3. **Target:** +20% en la prima
-    4. **Timeframe:** 
-       - SPY/QQQ: Vencimiento al día siguiente
-       - Otros: Vencimiento el viernes
-    5. **Stop Loss:** -50% en la prima
+    📊 Estadísticas:
+    - Días analizados: {total_dias_analizados}
+    - Señales detectadas: {total_senales_detectadas}
+    - Resultados guardados: {total_guardados}
+    - Total en base de datos: {len(analisis.resultados_historicos)}
     """)
+    st.balloons()
     
-    with st.expander("⚠️ Advertencias"):
-        st.warning("""
-        **IMPORTANTE:** 
-        - Este sistema es para fines educativos
-        - Las opciones son instrumentos de alto riesgo
-        - Puedes perder el 100% de la inversión
-        - Los resultados pasados no garantizan resultados futuros
-        - Siempre usa gestión de riesgo apropiada
-        """)
-    
-    st.caption(f"Última actualización: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    time.sleep(3)
+    st.rerun()
 
-# Footer
-st.markdown("---")
-st.caption("AG SPY System V90b - Mobile Optimized | Desarrollado para análisis de opciones PUT")
+def main():
+    st.title("🎯 AG1VR - DETECCIÓN EN TIEMPO REAL")
+    
+    try:
+        client = RESTClient(API_KEY)
+        st.success("✅ Conectado a Polygon.io")
+    except Exception as e:
+        st.error(f"❌ Error: {e}")
+        return
+    
+    # USAR TODOS LOS 33 TICKERS DEFINIDOS EN RANGOS_PRIMA
+    tickers = list(RANGOS_PRIMA.keys())
+    st.info(f"📊 Analizando {len(tickers)} tickers: {', '.join(tickers[:10])}...")
+    
+    analisis = AnalisisHistorico()
+    
+    # Verificar si hay suficientes datos históricos
+    if len(analisis.resultados_historicos) < 200:
+        st.warning(f"⚠️ Solo hay {len(analisis.resultados_historicos)} registros históricos. Se recomienda tener al menos 200.")
+        
+        with st.expander("🔄 ¿Cargar datos históricos ahora?", expanded=True):
+            st.info("Se cargarán ~4 meses de datos. Esto tarda 10-15 minutos pero solo se hace una vez.")
+            if st.button("✅ SÍ, cargar ahora", type="primary"):
+                cargar_historico_4_meses(client, analisis, tickers)
+                return
+    
+    with st.sidebar:
+        st.header("⚙️ Configuración")
+        usar_rsi = st.checkbox("Usar RSI", value=True)
+        usar_bb = st.checkbox("Usar Bollinger Bands", value=True)
+        threshold = st.slider("Threshold mínimo (%)", 50, 90, 70)
+        
+        if st.button("🔄 Actualizar Datos"):
+            st.rerun()
+        
+        st.subheader("📅 Fecha de Backtesting")
+        fecha_seleccionada = st.date_input(
+            "Selecciona fecha",
+            value=datetime(2025, 10, 17).date(),
+            max_value=datetime.now().date()
+        )
+        st.info(f"Analizando: {fecha_seleccionada.strftime('%A, %d %B %Y')}")
+        
+        st.divider()
+        st.subheader("📊 Base de Datos Histórica")
+        
+        num_registros = len(analisis.resultados_historicos)
+        if num_registros > 0:
+            st.success(f"✅ {num_registros} resultados guardados")
+            
+            fechas = [r['fecha'] for r in analisis.resultados_historicos]
+            if fechas:
+                fecha_min = min(fechas)
+                fecha_max = max(fechas)
+                st.caption(f"Rango: {fecha_min} a {fecha_max}")
+        else:
+            st.warning("⚠️ Sin datos históricos")
+        
+        if st.button("🔄 Cargar Histórico (4 meses)", help="Analiza los últimos 4 meses y guarda todos los D1"):
+            cargar_historico_4_meses(client, analisis, tickers)
+        
+        # BOTÓN PARA DESCARGAR BASE DE DATOS
+        st.divider()
+        st.subheader("💾 Gestión de Datos")
+        
+        if num_registros > 0:
+            # Preparar JSON para descarga
+            json_data = json.dumps(analisis.resultados_historicos, indent=2, ensure_ascii=False)
+            
+            st.download_button(
+                label="📥 Descargar Base de Datos",
+                data=json_data,
+                file_name=f"resultados_historicos_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json",
+                use_container_width=True,
+                help="Descarga todos los resultados guardados en formato JSON"
+            )
+        
+        # BOTÓN PARA BORRAR BASE DE DATOS
+        st.caption("⚠️ Usa esto solo si hay datos corruptos")
+        if st.button("🗑️ Borrar Base de Datos", type="secondary", use_container_width=True, help="Elimina todos los datos y empieza limpio"):
+            if st.session_state.get('confirmar_borrar', False):
+                try:
+                    if os.path.exists("historial_operaciones.json"):
+                        os.remove("historial_operaciones.json")
+                    if os.path.exists("resultados_historicos.json"):
+                        os.remove("resultados_historicos.json")
+                    st.success("✅ Base de datos borrada completamente")
+                    st.info("🔄 Recargando página...")
+                    time.sleep(2)
+                    st.session_state.confirmar_borrar = False
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Error: {e}")
+            else:
+                st.session_state.confirmar_borrar = True
+                st.warning("⚠️ Click de nuevo para CONFIRMAR el borrado")
+                st.rerun()
+    
+    fecha_desde = (fecha_seleccionada - timedelta(days=30)).strftime('%Y-%m-%d')
+    fecha_hasta = fecha_seleccionada.strftime('%Y-%m-%d')
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        st.subheader("📊 Señales en Tiempo Real")
+        
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        resultados = []
+        total_tickers = len(tickers)
+        
+        for idx, ticker in enumerate(tickers):
+            progress = (idx + 1) / total_tickers
+            progress_bar.progress(progress)
+            status_text.text(f"Analizando {ticker}... ({idx + 1}/{total_tickers})")
+            
+            try:
+                aggs = client.get_aggs(
+                    ticker=ticker,
+                    multiplier=1,
+                    timespan="day",
+                    from_=fecha_desde,
+                    to=fecha_hasta,
+                    limit=30
+                )
+                
+                if not aggs:
+                    continue
+                
+                data = []
+                for agg in aggs:
+                    data.append({
+                        'timestamp': pd.to_datetime(agg.timestamp, unit='ms'),
+                        'open': agg.open,
+                        'high': agg.high,
+                        'low': agg.low,
+                        'close': agg.close,
+                        'volume': agg.volume
+                    })
+                
+                df = pd.DataFrame(data)
+                df.set_index('timestamp', inplace=True)
+                df = df.sort_index()
+                
+                if len(df) < 10:
+                    continue
+                
+                # Calcular RSI
+                delta = df['close'].diff()
+                gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+                loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+                rs = gain / loss
+                df['RSI'] = 100 - (100 / (1 + rs))
+                
+                # Calcular Bollinger Bands
+                df['SMA_20'] = df['close'].rolling(20).mean()
+                df['STD_20'] = df['close'].rolling(20).std()
+                df['BB_Upper'] = df['SMA_20'] + (df['STD_20'] * 2)
+                df['BB_Lower'] = df['SMA_20'] - (df['STD_20'] * 2)
+                df['BB_Position'] = (df['close'] - df['BB_Lower']) / (df['BB_Upper'] - df['BB_Lower'])
+                
+                if len(df) < 2:
+                    continue
+                    
+                ultimo = df.iloc[-1]
+                anterior = df.iloc[-2]
+                
+                # VERIFICAR VELA ROJA
+                vela_roja = ultimo['close'] < anterior['close']
+                
+                if not vela_roja:
+                    continue
+                
+                hora_senal = "10:00 AM ET"
+                
+                rsi_actual = ultimo['RSI'] if not pd.isna(ultimo['RSI']) else 50
+                bb_position_actual = ultimo['BB_Position'] if not pd.isna(ultimo['BB_Position']) else 0.5
+                
+                # Calcular probabilidad
+                prob_base = 65
+                
+                if rsi_actual > 70:
+                    prob_ajustada = prob_base + 20
+                elif rsi_actual > 60:
+                    prob_ajustada = prob_base + 10
+                elif rsi_actual > 50:
+                    prob_ajustada = prob_base
+                else:
+                    prob_ajustada = prob_base - 15
+                
+                if bb_position_actual > 0.8:
+                    prob_ajustada += 15
+                elif bb_position_actual > 0.6:
+                    prob_ajustada += 8
+                else:
+                    prob_ajustada -= 5
+                
+                probabilidad_final = max(0, min(100, prob_ajustada))
+                
+                if probabilidad_final >= threshold:
+                    señal = "🎯 PUT"
+                    trade = "SI"
+                elif probabilidad_final >= 60:
+                    señal = "🟡 PUT"
+                    trade = "SI"
+                else:
+                    señal = "🚫 NO"
+                    trade = "NO"
+                
+                # Calcular ganancia histórica con detalles
+                ganancia_hist, num_dias_similares, dias_similares_detalle = analisis.calcular_ganancia_historica(
+                    ticker, 
+                    rsi_actual, 
+                    bb_position_actual,
+                    fecha_excluir=fecha_seleccionada.strftime('%Y-%m-%d'),
+                    usar_mediana=False
+                )
+                
+                # Calcular ganancia real
+                ganancia_real = calcular_ganancia_real_opcion(
+                    client,
+                    ticker,
+                    datetime.combine(fecha_seleccionada, datetime.min.time()),
+                    ultimo['open']
+                )
+                
+                # VERIFICAR DUPLICADOS - No guardar si ya existe este día
+                fecha_str = fecha_seleccionada.strftime('%Y-%m-%d')
+                ya_existe = any(
+                    r['fecha'] == fecha_str and r['ticker'] == ticker 
+                    for r in analisis.resultados_historicos
+                )
+                
+                if not ya_existe and ganancia_real['ganancia_pct'] > 0:
+                    analisis.agregar_resultado(
+                        fecha=fecha_str,
+                        ticker=ticker,
+                        rsi=rsi_actual,
+                        bb_position=bb_position_actual,
+                        ganancia_d1=ganancia_real['ganancia_pct'],
+                        ganancia_d2=ganancia_real['ganancia_dia_siguiente'],
+                        prima_entrada=ganancia_real['prima_entrada'],
+                        prima_max_d1=ganancia_real['prima_maxima'],
+                        prima_max_d2=ganancia_real['prima_maxima_dia2'],
+                        strike=ganancia_real['strike']
+                    )
+                
+                if ganancia_hist is not None:
+                    ganancia_hist_str = f"{int(ganancia_hist)}% ({num_dias_similares})"
+                else:
+                    ganancia_hist_str = "Sin datos"
+                
+                resultados.append({
+                    'Activo': ticker,
+                    'Hora': hora_senal,
+                    'Señal': señal,
+                    'Probabilidad': probabilidad_final,
+                    'RSI': rsi_actual,
+                    'BB': bb_position_actual,
+                    'Trade': trade,
+                    'Strike': f"${ganancia_real.get('strike', 0):.0f}",
+                    'Prima Entrada': f"${ganancia_real.get('prima_entrada', 0):.2f}",
+                    'Prima Máx D1': f"${ganancia_real.get('prima_maxima', 0):.2f}",
+                    'Prima Máx D2': f"${ganancia_real.get('prima_maxima_dia2', 0):.2f}",
+                    'Ganancia Hist': ganancia_hist_str,
+                    'Ganancia Día 1': ganancia_real['ganancia_pct'],
+                    'Ganancia Día 2': ganancia_real['ganancia_dia_siguiente'],
+                    'Éxito D1': ganancia_real['exito'],
+                    'Éxito D2': ganancia_real['exito_dia2'],
+                    '_dias_similares_detalle': dias_similares_detalle  # Para el modal
+                })
+                
+            except Exception as e:
+                st.write(f"❌ {ticker}: Error - {str(e)}")
+        
+        progress_bar.empty()
+        status_text.empty()
+        
+        if resultados:
+            st.subheader("📊 Resultados de Análisis")
+            
+            df_resultados = pd.DataFrame(resultados)
+            
+            # ORDENAR POR GANANCIA HISTÓRICA (mayor a menor) ANTES de formatear
+            def extraer_ganancia_hist(ganancia_hist_str):
+                if ganancia_hist_str == "Sin datos":
+                    return -1  # Poner al final
+                try:
+                    return float(ganancia_hist_str.split('%')[0])
+                except:
+                    return -1
+            
+            df_resultados['_ganancia_sort'] = df_resultados['Ganancia Hist'].apply(extraer_ganancia_hist)
+            df_resultados = df_resultados.sort_values('_ganancia_sort', ascending=False)
+            
+            # Guardar días similares detalle antes de eliminar columna
+            dias_similares_map = dict(zip(df_resultados['Activo'], df_resultados['_dias_similares_detalle']))
+            
+            df_resultados = df_resultados.drop(['_ganancia_sort', '_dias_similares_detalle'], axis=1)
+            
+            # Renombrar columnas
+            df_resultados = df_resultados.rename(columns={
+                'Activo': 'Ticker',
+                'Hora': 'Hora',
+                'Señal': 'Señal',
+                'Probabilidad': 'Prob (%)',
+                'RSI': 'RSI',
+                'BB': 'BB Pos',
+                'Trade': 'Trade',
+                'Strike': 'Strike PUT',
+                'Prima Entrada': 'Prima Inicial',
+                'Prima Máx D1': 'Prima Máx D1',
+                'Prima Máx D2': 'Prima Máx D2',
+                'Ganancia Hist': 'Ganancia Hist (n)',
+                'Ganancia Día 1': 'Ganancia D1 (%)',
+                'Ganancia Día 2': 'Ganancia D2 (%)',
+                'Éxito D1': 'Éxito D1',
+                'Éxito D2': 'Éxito D2'
+            })
+            
+            # FORMATEAR SIN DECIMALES - SOLO ENTEROS
+            df_resultados['Ganancia D1 (%)'] = df_resultados['Ganancia D1 (%)'].apply(lambda x: f"{int(x)}%" if pd.notnull(x) else "0%")
+            df_resultados['Ganancia D2 (%)'] = df_resultados['Ganancia D2 (%)'].apply(lambda x: f"{int(x)}%" if pd.notnull(x) else "0%")
+            df_resultados['Prob (%)'] = df_resultados['Prob (%)'].apply(lambda x: f"{int(x)}%" if pd.notnull(x) else "0%")
+            df_resultados['RSI'] = df_resultados['RSI'].apply(lambda x: f"{int(x)}" if pd.notnull(x) else "0")
+            df_resultados['BB Pos'] = df_resultados['BB Pos'].apply(lambda x: f"{x:.2f}" if pd.notnull(x) else "0.00")
+            
+            # Colorear columna Ganancia Hist
+            def highlight_ganancia_hist(row):
+                return ['background-color: #fffacd' if col == 'Ganancia Hist (n)' else '' for col in row.index]
+            
+            st.dataframe(
+                df_resultados.style.apply(highlight_ganancia_hist, axis=1),
+                use_container_width=True, 
+                hide_index=True
+            )
+            
+            # ==========================================
+            # NUEVO: MODAL MEJORADO PARA DÍAS SIMILARES
+            # ==========================================
+            
+            st.markdown("---")
+            st.subheader("🔍 Ver Días Similares - Click en un ticker")
+            
+            # Crear botones en columnas (5 por fila)
+            tickers_resultados = [r['Activo'] for r in resultados]
+            
+            # Organizar en filas de 5 botones
+            for i in range(0, len(tickers_resultados), 5):
+                cols = st.columns(5)
+                for j, ticker in enumerate(tickers_resultados[i:i+5]):
+                    with cols[j]:
+                        # Obtener ganancia histórica para colorear botón
+                        resultado_ticker = next(r for r in resultados if r['Activo'] == ticker)
+                        ganancia_hist_str = resultado_ticker['Ganancia Hist']
+                        
+                        # Color según si tiene datos o no
+                        if "Sin datos" in ganancia_hist_str:
+                            button_type = "secondary"
+                            emoji = "⚪"
+                        else:
+                            button_type = "primary"
+                            emoji = "📊"
+                        
+                        if st.button(f"{emoji} {ticker}", key=f"modal_{ticker}", type=button_type, use_container_width=True):
+                            # Guardar en session_state para mostrar modal
+                            st.session_state.modal_ticker = ticker
+                            st.session_state.modal_open = True
+            
+            # Mostrar modal si está activo
+            if st.session_state.get('modal_open', False):
+                ticker_modal = st.session_state.get('modal_ticker')
+                
+                if ticker_modal:
+                    # Encontrar el resultado del ticker
+                    resultado_ticker = next((r for r in resultados if r['Activo'] == ticker_modal), None)
+                    
+                    if resultado_ticker:
+                        # Crear contenedor con fondo destacado
+                        with st.container():
+                            st.markdown("""
+                            <style>
+                            .modal-container {
+                                background-color: #f0f2f6;
+                                padding: 20px;
+                                border-radius: 10px;
+                                border: 2px solid #4CAF50;
+                                margin: 10px 0;
+                            }
+                            </style>
+                            """, unsafe_allow_html=True)
+                            
+                            # Header con botón cerrar
+                            col_title, col_close = st.columns([6, 1])
+                            with col_title:
+                                st.markdown(f"### 📊 Días Similares: **{ticker_modal}**")
+                            with col_close:
+                                if st.button("❌ Cerrar", key="close_modal", type="secondary"):
+                                    st.session_state.modal_open = False
+                                    st.rerun()
+                            
+                            st.markdown("---")
+                            
+                            # Obtener días similares del mapa
+                            dias_similares_detalle = dias_similares_map.get(ticker_modal, [])
+                            
+                            if dias_similares_detalle:
+                                st.success(f"✅ Se encontraron **{len(dias_similares_detalle)} días similares**")
+                                
+                                # Crear tabla de días similares
+                                dias_similares_data = []
+                                for hist_result in dias_similares_detalle:
+                                    dias_similares_data.append({
+                                        'Fecha': hist_result['fecha'],
+                                        'RSI': f"{int(hist_result['rsi'])}",
+                                        'BB Pos': f"{hist_result['bb_position']:.2f}",
+                                        'Ganancia D1': f"{int(hist_result['ganancia_d1'])}%",
+                                        'Ganancia D2': f"{int(hist_result['ganancia_d2'])}%",
+                                        'Strike': f"${hist_result['strike']:.0f}",
+                                        'Prima Entrada': f"${hist_result['prima_entrada']:.2f}"
+                                    })
+                                
+                                df_similares = pd.DataFrame(dias_similares_data)
+                                df_similares = df_similares.sort_values('Ganancia D1', ascending=False)
+                                
+                                st.dataframe(
+                                    df_similares,
+                                    use_container_width=True,
+                                    hide_index=True,
+                                    height=400
+                                )
+                                
+                                # Estadísticas
+                                ganancias_d1 = [int(d['Ganancia D1'].replace('%', '')) for d in dias_similares_data]
+                                promedio = sum(ganancias_d1) / len(ganancias_d1)
+                                mediana = sorted(ganancias_d1)[len(ganancias_d1)//2]
+                                
+                                st.info("ℹ️ El sistema usa **PROMEDIO** (no mediana) para Ganancia Histórica")
+                                
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.metric("✅ Promedio D1", f"{int(promedio)}%")
+                                with col2:
+                                    st.metric("Mediana D1", f"{int(mediana)}%")
+                                with col3:
+                                    exitos = len([g for g in ganancias_d1 if g >= 100])
+                                    tasa = (exitos / len(ganancias_d1)) * 100
+                                    st.metric("Tasa Éxito", f"{int(tasa)}%")
+                            else:
+                                st.warning(f"⚠️ No se encontraron días similares para {ticker_modal}")
+                                st.info("💡 Esto puede ocurrir porque no hay suficientes datos históricos con condiciones similares (RSI y BB Position)")
+            
+            st.markdown("---")
+            
+            # Estadísticas generales
+            col_stat1, col_stat2, col_stat3, col_stat4, col_stat5 = st.columns(5)
+            with col_stat1:
+                st.metric("Señales Detectadas", len(resultados))
+            with col_stat2:
+                trades_si = len([r for r in resultados if r['Trade'] == 'SI'])
+                st.metric("Señales de TRADE", trades_si)
+            with col_stat3:
+                exitos_d1 = len([r for r in resultados if r['Éxito D1'] == '✅'])
+                tasa_exito_d1 = (exitos_d1 / len(resultados) * 100) if len(resultados) > 0 else 0
+                st.metric("Éxito Día 1", f"{int(tasa_exito_d1)}%")
+            with col_stat4:
+                exitos_d2 = len([r for r in resultados if r['Éxito D2'] == '✅'])
+                con_datos_d2 = len([r for r in resultados if r['Éxito D2'] != '⚪'])
+                if con_datos_d2 > 0:
+                    tasa_exito_d2 = (exitos_d2 / con_datos_d2 * 100)
+                else:
+                    tasa_exito_d2 = 0
+                st.metric("Éxito Día 2", f"{int(tasa_exito_d2)}%")
+            with col_stat5:
+                prob_promedio = sum([r['Probabilidad'] for r in resultados]) / len(resultados)
+                st.metric("Prob. Promedio", f"{prob_promedio:.1f}%")
+        else:
+            st.info("ℹ️ No se detectaron señales para la fecha seleccionada")
+    
+    with col2:
+        st.subheader("💾 Registrar Trade Manual")
+        
+        with st.form("registro_trade"):
+            ticker_reg = st.selectbox("Activo", tickers)
+            rsi_reg = st.number_input("RSI", min_value=0.0, max_value=100.0, value=70.0)
+            bb_reg = st.number_input("BB Position", min_value=0.0, max_value=1.0, value=0.8)
+            resultado_reg = st.number_input("Resultado (%)", value=0.0)
+            
+            if st.form_submit_button("💾 Guardar Resultado"):
+                analisis.agregar_operacion(ticker_reg, rsi_reg, bb_reg, resultado_reg, datetime.now().isoformat())
+                st.success("✅ Resultado guardado")
+
+if __name__ == "__main__":
+    main()
