@@ -114,8 +114,21 @@ class AnalisisHistorico:
             self.resultados_historicos = []
     
     def guardar_resultados_historicos(self):
+        # Convertir valores bool a string para evitar errores de serialización
+        resultados_limpios = []
+        for r in self.resultados_historicos:
+            resultado_limpio = {}
+            for k, v in r.items():
+                if isinstance(v, bool):
+                    resultado_limpio[k] = str(v)
+                elif isinstance(v, (int, float)) and pd.isna(v):
+                    resultado_limpio[k] = 0
+                else:
+                    resultado_limpio[k] = v
+            resultados_limpios.append(resultado_limpio)
+        
         with open(self.resultados_file, 'w') as f:
-            json.dump(self.resultados_historicos, f, indent=2)
+            json.dump(resultados_limpios, f, indent=2)
     
     def agregar_resultado(self, fecha, ticker, rsi, bb_position, ganancia_d1, ganancia_d2, prima_entrada, prima_max_d1, prima_max_d2, strike):
         """Agrega un resultado histórico verificando que sea una vela roja válida"""
