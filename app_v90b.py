@@ -172,7 +172,29 @@ class AnalisisHistorico:
                 print(f"❌ Error crítico: {e2}")
     
     def agregar_resultado(self, fecha, ticker, rsi, bb_position, ganancia_d1, ganancia_d2, prima_entrada, prima_max_d1, prima_max_d2, strike):
-        """Agrega un resultado histórico verificando que sea una vela roja válida"""
+        """Agrega un resultado histórico verificando que sea válido"""
+        
+        # VALIDACIONES CRÍTICAS
+        # 1. Validar que la prima esté en el rango configurado
+        if ticker in RANGOS_PRIMA:
+            rango = RANGOS_PRIMA[ticker]
+            if prima_entrada < rango['min'] * 0.8 or prima_entrada > rango['max'] * 1.5:
+                print(f"⚠️ Prima fuera de rango para {ticker}: ${prima_entrada:.2f} (rango: ${rango['min']:.2f}-${rango['max']:.2f})")
+                return  # NO guardar si está fuera de rango
+        
+        # 2. Validar ganancias realistas (máximo 400%)
+        if ganancia_d1 > 400 or ganancia_d2 > 400:
+            print(f"⚠️ Ganancia irreal detectada para {ticker}: D1={ganancia_d1}%, D2={ganancia_d2}%")
+            return  # NO guardar ganancias irreales
+        
+        # 3. Validar que no sea duplicado
+        for r in self.resultados_historicos[-10:]:  # Revisar últimos 10
+            if (r.get('ticker') == str(ticker) and 
+                r.get('fecha') == str(fecha) and
+                abs(float(r.get('rsi', 0)) - float(rsi)) < 1):
+                print(f"⚠️ Registro duplicado detectado: {ticker} {fecha}")
+                return  # NO guardar duplicados
+        
         # Convertir valores a tipos seguros para JSON
         resultado = {
             'fecha': str(fecha),
@@ -220,10 +242,15 @@ class AnalisisHistorico:
                 
                 if rsi_similar and bb_similar:
                     ganancia = resultado['ganancia_d1']
-                    if ganancia > 0:
+                    prima = resultado.get('prima_entrada', 0)
+                    
+                    # FILTRAR DATOS IRREALES
+                    if ganancia > 0 and ganancia <= 400 and prima > 0.05:
                         dias_similares.append(ganancia)
                         dias_similares_detalle.append(resultado)
                         print(f"   ✅ {resultado['fecha']}: RSI={rsi_hist:.1f}, BB={bb_hist:.2f} → D1={ganancia:.1f}%")
+                    elif ganancia > 400:
+                        print(f"   ❌ {resultado['fecha']}: Ganancia irreal {ganancia:.1f}% - EXCLUIDO")
         
         if len(dias_similares) == 0:
             print(f"   ❌ No se encontraron días similares")
@@ -715,8 +742,15 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
         except:
             prima_maxima_dia1 = prima_entrada
         
-        # Calcular ganancia día 1
-        ganancia_dia1 = ((prima_maxima_dia1 - prima_entrada) / prima_entrada * 100) if prima_entrada > 0 else 0
+        # Calcular ganancia día 1 con validaciones
+        if prima_entrada > 0 and prima_entrada < 50:  # Prima razonable
+            ganancia_dia1 = ((prima_maxima_dia1 - prima_entrada) / prima_entrada * 100)
+            # Validar que sea realista
+            if ganancia_dia1 > 400:
+                print(f"⚠️ Ganancia D1 irreal: {ganancia_dia1:.1f}% - limitando a 400%")
+                ganancia_dia1 = 400
+        else:
+            ganancia_dia1 = 0
         
         # Día 2
         prima_maxima_dia2 = 0
@@ -734,7 +768,13 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
             
             if option_aggs_dia2:
                 prima_maxima_dia2 = max([agg.high for agg in option_aggs_dia2])
-                ganancia_dia2 = ((prima_maxima_dia2 - prima_entrada) / prima_entrada * 100) if prima_entrada > 0 else 0
+                if prima_entrada > 0 and prima_entrada < 50:
+                    ganancia_dia2 = ((prima_maxima_dia2 - prima_entrada) / prima_entrada * 100)
+                    if ganancia_dia2 > 400:
+                        print(f"⚠️ Ganancia D2 irreal: {ganancia_dia2:.1f}% - limitando a 400%")
+                        ganancia_dia2 = 400
+                else:
+                    ganancia_dia2 = 0
         except:
             pass
         
