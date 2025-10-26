@@ -449,8 +449,8 @@ def buscar_contratos_disponibles(client, ticker, fecha_vencimiento, fecha_analis
 
 def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
     """
-    VERSIÓN MEJORADA que funciona para TODAS las fechas (pasadas y futuras)
-    Lógica: vencimiento + prima en rango → strike automático
+    NUEVA ESTRATEGIA V3: Buscar el strike que ofrece MAYOR GANANCIA PORCENTUAL
+    dentro del rango de primas configurado
     """
     try:
         if ticker not in RANGOS_PRIMA:
@@ -476,11 +476,11 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
             fecha_dia_siguiente += timedelta(days=1)
         fecha_dia_siguiente_str = fecha_dia_siguiente.strftime('%Y-%m-%d')
         
-        print(f"\n=== NUEVA LÓGICA: BUSCANDO POR PRIMA PARA {ticker} ===")
-        print(f"Fecha análisis: {fecha_str}")
-        print(f"Vencimiento objetivo: {fecha_vencimiento.strftime('%Y-%m-%d')}")
-        print(f"🎯 RANGO DE PRIMA BUSCADO: ${rango['min']:.2f} - ${rango['max']:.2f}")
-        print(f"Precio stock actual: ${precio_stock:.2f}")
+        print(f"\n=== NUEVA ESTRATEGIA: BUSCANDO MAYOR GANANCIA % ===")
+        print(f"Ticker: {ticker}")
+        print(f"Fecha: {fecha_str}")
+        print(f"Precio stock: ${precio_stock:.2f}")
+        print(f"Rango prima objetivo: ${rango['min']:.2f} - ${rango['max']:.2f}")
         
         # PASO 1: Determinar estrategia según el año
         if fecha.year >= 2025:
@@ -554,45 +554,28 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
         contratos = contratos_por_fecha[fecha_elegida]
         print(f"📅 Usando contratos del {fecha_elegida} ({len(contratos)} strikes)")
         
-        # PASO 2: Buscar contratos con prima en el rango
-        mejor_contrato = None
-        prima_entrada = None
+        print(f"\n📊 Analizando {len(contratos)} contratos...")
+        
+        # ANALIZAR TODOS LOS CONTRATOS Y CALCULAR GANANCIAS
+        candidatos = []
         contratos_analizados = 0
-        contratos_con_datos = []
         
-        print(f"\n🔍 Buscando contratos con prima entre ${rango['min']:.2f} - ${rango['max']:.2f}...")
-        print(f"💵 Precio del stock: ${precio_stock:.2f}")
-        
-        # Ordenar contratos por strike (de menor a mayor)
-        contratos_ordenados = sorted(contratos, key=lambda x: x.get('strike_price', 0))
-        print(f"📈 Analizando {len(contratos_ordenados)} contratos...")
-        print(f"🔍 Strikes disponibles: ${contratos_ordenados[0]['strike_price']} - ${contratos_ordenados[-1]['strike_price']}")
-        
-        # Analizar cada contrato
-        for contrato in contratos_ordenados:
-            contratos_analizados += 1
+        for contrato in contratos:
             option_ticker = contrato['ticker']
             strike = contrato['strike_price']
             
-            # Solo analizar strikes razonables para PUT (strike < precio para OTM)
-            # Para PUT: OTM cuando strike < precio_stock
+            # Filtrar strikes razonables
             distancia_pct = ((strike - precio_stock) / precio_stock) * 100
-            
-            # Para PUT queremos strikes DEBAJO del precio (distancia negativa)
-            # Aceptar desde 10% ITM hasta 10% OTM
-            if distancia_pct > 10 or distancia_pct < -10:  # Skip si está muy lejos
-                if contratos_analizados <= 5:
-                    print(f"      ⚠️ Strike ${strike} excluido (distancia: {distancia_pct:+.1f}%)")
+            if distancia_pct < -15 or distancia_pct > 5:
                 continue
-            
-            # Mostrar progreso cada 5 contratos
-            if contratos_analizados % 5 == 1:
-                print(f"   Analizando strike ${strike:.0f} ({distancia_pct:+.1f}% del precio)...")
+                
+            contratos_analizados += 1
+            if contratos_analizados > 50:  # Límite para no demorar mucho
+                break
             
             try:
                 # Obtener datos del día
-                # IMPORTANTE: Usar 1 minuto para datos históricos, mejor granularidad
-                multiplier = 1 if fecha and fecha.year < 2025 else 5
+                multiplier = 1 if fecha.year < 2025 else 5
                 
                 option_aggs = client.get_aggs(
                     ticker=option_ticker,
@@ -600,102 +583,64 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                     timespan="minute",
                     from_=fecha_str,
                     to=fecha_str,
-                    limit=50000
+                    limit=500
                 )
                 
                 if option_aggs and len(option_aggs) > 0:
-                    # Buscar si alguna prima está en el rango
-                    prima_encontrada = False
-                    prima_en_rango = None
-                    
-                    # Recolectar todos los precios del día
+                    # Analizar todos los precios del día
                     todos_precios = []
                     for agg in option_aggs:
-                        precios = [agg.open, agg.high, agg.low, agg.close]
-                        todos_precios.extend(precios)
+                        todos_precios.extend([agg.open, agg.high, agg.low, agg.close])
                     
-                    # Debug para strikes importantes
-                    if strike in [576, 577, 578, 579, 580]:
-                        print(f"      🔍 Strike ${strike}: {len(option_aggs)} agregados, rango ${min(todos_precios):.2f}-${max(todos_precios):.2f}")
-                        
-                        # Verificar si algún precio está en el rango
-                        for precio in precios:
-                            if rango['min'] <= precio <= rango['max']:
-                                if not prima_encontrada:  # Solo guardar el primer precio en rango
-                                    prima_en_rango = precio
-                                    prima_encontrada = True
+                    min_precio = min(todos_precios)
+                    max_precio = max(todos_precios)
                     
-                    if todos_precios:
-                        min_prima = min(todos_precios)
-                        max_prima = max(todos_precios)
-                        promedio_prima = sum(todos_precios) / len(todos_precios)
+                    # Buscar primas en el rango objetivo
+                    primas_en_rango = [p for p in todos_precios if rango['min'] <= p <= rango['max']]
+                    
+                    if primas_en_rango:
+                        # Para cada prima en rango, calcular ganancia potencial
+                        for prima_entrada in primas_en_rango[:3]:  # Máximo 3 por strike
+                            # Calcular ganancia máxima posible
+                            ganancia_maxima_pct = ((max_precio - prima_entrada) / prima_entrada * 100)
+                            
+                            candidatos.append({
+                                'contrato': contrato,
+                                'prima_entrada': prima_entrada,
+                                'prima_maxima': max_precio,
+                                'ganancia_pct': ganancia_maxima_pct,
+                                'min_precio_dia': min_precio,
+                                'distancia_otm': distancia_pct
+                            })
+                            
+                            if len(candidatos) % 5 == 0:
+                                print(f"   Analizados {len(candidatos)} candidatos...")
+                    
+                    # También considerar el más cercano si no hay en rango exacto
+                    elif len(candidatos) < 5:  # Solo si tenemos pocos candidatos
+                        # Buscar el precio más cercano al rango
+                        rango_medio = (rango['min'] + rango['max']) / 2
+                        precio_mas_cercano = min(todos_precios, key=lambda x: abs(x - rango_medio))
                         
-                        contratos_con_datos.append({
-                            'ticker': option_ticker,
-                            'strike': strike,
-                            'min_prima': min_prima,
-                            'max_prima': max_prima,
-                            'promedio_prima': promedio_prima,
-                            'prima_en_rango': prima_en_rango,
-                            'distancia_pct': distancia_pct,
-                            'en_rango': prima_encontrada
-                        })
-                        
-                        if prima_encontrada and not mejor_contrato:
-                            mejor_contrato = contrato
-                            prima_entrada = prima_en_rango
-                            print(f"\n✅ ¡¡¡ENCONTRADO!!!")
-                            print(f"   Strike: ${strike:.2f}")
-                            print(f"   Prima en rango: ${prima_en_rango:.2f}")
-                            print(f"   Distancia del precio: {distancia_pct:+.1f}%")
-                            # NO hacer break aquí, continuar recolectando datos para estadísticas
-                
+                        # Solo considerar si está razonablemente cerca
+                        if abs(precio_mas_cercano - rango_medio) <= rango_medio * 0.5:
+                            ganancia_pct = ((max_precio - precio_mas_cercano) / precio_mas_cercano * 100)
+                            
+                            candidatos.append({
+                                'contrato': contrato,
+                                'prima_entrada': precio_mas_cercano,
+                                'prima_maxima': max_precio,
+                                'ganancia_pct': ganancia_pct,
+                                'min_precio_dia': min_precio,
+                                'distancia_otm': distancia_pct,
+                                'fuera_de_rango': True
+                            })
+                            
             except Exception as e:
-                if strike in [576, 577, 578, 579, 580]:
-                    print(f"      ❌ Error en strike ${strike}: {str(e)}")
                 continue
         
-        print(f"\n📊 Analizados {contratos_analizados} contratos, {len(contratos_con_datos)} con datos")
-        
-        # Si no encontramos ninguno en el rango, buscar el más cercano
-        if not mejor_contrato and contratos_con_datos:
-            print(f"\n⚠️ No se encontró prima exacta en rango ${rango['min']:.2f}-${rango['max']:.2f}")
-            print("🔍 Buscando la prima más cercana...")
-            
-            rango_medio = (rango['min'] + rango['max']) / 2
-            
-            # Ordenar por cercanía al rango
-            contratos_con_datos.sort(key=lambda x: min(
-                abs(x['min_prima'] - rango_medio),
-                abs(x['max_prima'] - rango_medio),
-                abs(x['promedio_prima'] - rango_medio)
-            ))
-            
-            # Mostrar las 3 mejores opciones
-            print("\n📋 Mejores opciones disponibles:")
-            for i, c in enumerate(contratos_con_datos[:3]):
-                print(f"   {i+1}. Strike ${c['strike']:.2f} - Primas: ${c['min_prima']:.2f}-${c['max_prima']:.2f} (prom: ${c['promedio_prima']:.2f})")
-            
-            # Seleccionar el más cercano
-            mejor_opcion = contratos_con_datos[0]
-            
-            # Buscar el contrato correspondiente
-            for contrato in contratos:
-                if contrato['ticker'] == mejor_opcion['ticker']:
-                    mejor_contrato = contrato
-                    # Buscar la prima más cercana al rango objetivo
-                    # Si hay una prima en rango, usarla
-                    if mejor_opcion['prima_en_rango']:
-                        prima_entrada = mejor_opcion['prima_en_rango']
-                    else:
-                        # Si no, usar el promedio como aproximación
-                        prima_entrada = mejor_opcion['promedio_prima']
-                    break
-            
-            print(f"\n✅ Seleccionado: Strike ${mejor_opcion['strike']:.2f} con prima ${prima_entrada:.2f}")
-        
-        if not mejor_contrato:
-            print("❌ No se pudo encontrar ningún contrato adecuado")
+        if not candidatos:
+            print("❌ No se encontraron candidatos viables")
             return {
                 'ganancia_pct': 0,
                 'ganancia_dia_siguiente': 0,
@@ -705,11 +650,44 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                 'prima_entrada': 0,
                 'prima_maxima': 0,
                 'prima_maxima_dia2': 0,
-                'mensaje': 'Sin contratos con datos'
+                'mensaje': 'Sin primas en rango'
             }
         
-        # PASO 3: Calcular ganancias
+        # SELECCIONAR EL MEJOR: Mayor ganancia % con prima en rango preferentemente
+        print(f"\n🎯 Encontrados {len(candidatos)} candidatos")
+        
+        # Separar en rango vs fuera de rango
+        en_rango = [c for c in candidatos if not c.get('fuera_de_rango', False)]
+        fuera_rango = [c for c in candidatos if c.get('fuera_de_rango', False)]
+        
+        # Preferir los que están en rango
+        if en_rango:
+            # Ordenar por mayor ganancia %
+            en_rango.sort(key=lambda x: x['ganancia_pct'], reverse=True)
+            mejor = en_rango[0]
+            print(f"\n✅ MEJOR OPCIÓN (en rango):")
+        else:
+            # Si no hay en rango, usar el más cercano con mejor ganancia
+            fuera_rango.sort(key=lambda x: x['ganancia_pct'], reverse=True)
+            mejor = fuera_rango[0]
+            print(f"\n⚠️ MEJOR OPCIÓN (fuera de rango):")
+        
+        print(f"   Strike: ${mejor['contrato']['strike_price']}")
+        print(f"   Prima entrada: ${mejor['prima_entrada']:.2f}")
+        print(f"   Prima máxima: ${mejor['prima_maxima']:.2f}")
+        print(f"   GANANCIA POTENCIAL: {mejor['ganancia_pct']:.1f}%")
+        
+        # Mostrar top 3 alternativas
+        print(f"\n📋 Otras opciones consideradas:")
+        todos_ordenados = sorted(candidatos, key=lambda x: x['ganancia_pct'], reverse=True)
+        for i, alt in enumerate(todos_ordenados[1:4]):
+            print(f"   {i+2}. Strike ${alt['contrato']['strike_price']}: "
+                  f"Prima ${alt['prima_entrada']:.2f} → {alt['ganancia_pct']:.1f}%")
+        
+        # Obtener datos completos para el mejor
+        mejor_contrato = mejor['contrato']
         option_ticker = mejor_contrato['ticker']
+        prima_entrada = mejor['prima_entrada']
         strike_real = mejor_contrato['strike_price']
         
         print(f"\n📈 CALCULANDO GANANCIAS para {option_ticker}")
@@ -776,7 +754,7 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
             'prima_entrada': round(prima_entrada, 2) if prima_entrada else 0,
             'prima_maxima': round(prima_maxima_dia1, 2),
             'prima_maxima_dia2': round(prima_maxima_dia2, 2),
-            'mensaje': f'Strike ${strike_real:.2f} (auto-seleccionado por prima)'
+            'mensaje': f'Strike ${strike_real:.2f} - Mejor ganancia: {ganancia_dia1:.1f}%'
         }
         
     except Exception as e:
@@ -1228,7 +1206,7 @@ def calcular_ganancia_real_opcion_OLD(client, ticker, fecha, precio_stock):
                     timespan="minute",
                     from_=fecha_dia_siguiente_str,
                     to=fecha_dia_siguiente_str,
-                    limit=50000
+                    limit=5000  # Suficiente para todo el día
                 )
             except:
                 pass
