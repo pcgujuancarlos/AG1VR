@@ -8,6 +8,15 @@ import sys
 import time
 from dotenv import load_dotenv
 
+# Importar funciones requeridas por Alberto
+try:
+    from funciones_alberto import (
+        calc_bins, get_cohort, calc_mfe, 
+        percentil_10, hist_90_display, normalizar_columnas
+    )
+except ImportError:
+    print("⚠️ funciones_alberto.py no encontrado - usando funciones legacy")
+
 # Cargar variables de entorno
 load_dotenv()
 
@@ -214,23 +223,98 @@ class AnalisisHistorico:
         self.guardar_resultados_historicos()
     
     def calcular_ganancia_historica(self, ticker, rsi, bb_position, fecha_excluir=None, usar_mediana=False):
-        """Calcula ganancia histórica promedio de días similares"""
-        dias_similares = []
-        dias_similares_detalle = []  # Para mostrar en modal
+        """Calcula ganancia histórica usando las especificaciones de Alberto"""
         
-        # AMPLIAR RANGOS para encontrar más días similares
+        try:
+            # Convertir resultados históricos a DataFrame
+            if not self.resultados_historicos:
+                return None, 0, []
+            
+            df_hist = pd.DataFrame(self.resultados_historicos)
+            
+            # Preparar dataframe actual
+            df_current = pd.DataFrame([{
+                'ticker': ticker,
+                'RSI': rsi,
+                'BB Position': bb_position,
+                'side': 'PUT'  # Asumimos PUT por defecto
+            }])
+            
+            # Normalizar y calcular bins según Alberto
+            df_current = calc_bins(df_current)
+            df_hist = calc_bins(df_hist)
+            
+            # Obtener bins actuales
+            current_rsi_bin = df_current['rsi_bin'].iloc[0]
+            current_bb_bin = df_current['bb_bin'].iloc[0]
+            
+            # Filtrar por ticker
+            df_hist_ticker = df_hist[df_hist['ticker'] == ticker].copy()
+            
+            # Excluir fecha si se especifica
+            if fecha_excluir:
+                df_hist_ticker = df_hist_ticker[df_hist_ticker['fecha'] != fecha_excluir]
+            
+            # Añadir side si no existe
+            if 'side' not in df_hist_ticker.columns:
+                df_hist_ticker['side'] = 'PUT'
+            
+            # Obtener cohorte con las nuevas reglas (n≥3, expansión ±1)
+            cohort = get_cohort(
+                df_hist_ticker,
+                current_rsi_bin,
+                current_bb_bin,
+                'PUT',
+                min_n=3
+            )
+            
+            if cohort.empty:
+                print(f"   ❌ No se encontraron días similares para {ticker}")
+                return None, 0, []
+            
+            # Filtrar ganancias irreales
+            cohort = cohort[
+                (cohort['ganancia_d1'] > 0) & 
+                (cohort['ganancia_d1'] <= 400) &
+                (cohort['prima_entrada'] > 0.05)
+            ]
+            
+            if cohort.empty:
+                return None, 0, []
+            
+            # Calcular ganancia histórica
+            dias_similares = cohort['ganancia_d1'].tolist()
+            
+            if usar_mediana:
+                ganancia_hist = np.median(dias_similares)
+            else:
+                ganancia_hist = np.mean(dias_similares)
+            
+            # Convertir cohort a lista de diccionarios para compatibilidad
+            dias_similares_detalle = cohort.to_dict('records')
+            
+            print(f"\n🔍 DÍAS SIMILARES PARA {ticker} (usando bins de Alberto):")
+            print(f"   RSI bin: {current_rsi_bin} | BB bin: {current_bb_bin}")
+            print(f"   Cohorte encontrada: {len(cohort)} días")
+            print(f"   Ganancia histórica: {ganancia_hist:.0f}%")
+            
+            return ganancia_hist, len(dias_similares), dias_similares_detalle
+            
+        except Exception as e:
+            print(f"❌ Error en calcular_ganancia_historica: {e}")
+            # Fallback al método anterior si hay error
+            return self._calcular_ganancia_historica_legacy(ticker, rsi, bb_position, fecha_excluir, usar_mediana)
+    
+    def _calcular_ganancia_historica_legacy(self, ticker, rsi, bb_position, fecha_excluir=None, usar_mediana=False):
+        """Método legacy como fallback"""
+        dias_similares = []
+        dias_similares_detalle = []
+        
         rsi_rango = 10
         bb_rango = 0.20
         
-        print(f"\n🔍 BUSCANDO DÍAS SIMILARES PARA {ticker}")
-        print(f"   RSI objetivo: {rsi:.1f} (rango: {rsi-rsi_rango:.1f} - {rsi+rsi_rango:.1f})")
-        print(f"   BB objetivo: {bb_position:.2f} (rango: {bb_position-bb_rango:.2f} - {bb_position+bb_rango:.2f})")
-        print(f"   Fecha a excluir: {fecha_excluir}")
-        print(f"   Total registros históricos: {len(self.resultados_historicos)}")
-        
         for resultado in self.resultados_historicos:
             if fecha_excluir and resultado.get('fecha') == fecha_excluir:
-                print(f"   ⏭️  Saltando fecha actual: {resultado.get('fecha')}")
                 continue
                 
             if resultado['ticker'] == ticker:
@@ -244,26 +328,17 @@ class AnalisisHistorico:
                     ganancia = resultado['ganancia_d1']
                     prima = resultado.get('prima_entrada', 0)
                     
-                    # FILTRAR DATOS IRREALES
                     if ganancia > 0 and ganancia <= 400 and prima > 0.05:
                         dias_similares.append(ganancia)
                         dias_similares_detalle.append(resultado)
-                        print(f"   ✅ {resultado['fecha']}: RSI={rsi_hist:.1f}, BB={bb_hist:.2f} → D1={ganancia:.1f}%")
-                    elif ganancia > 400:
-                        print(f"   ❌ {resultado['fecha']}: Ganancia irreal {ganancia:.1f}% - EXCLUIDO")
         
         if len(dias_similares) == 0:
-            print(f"   ❌ No se encontraron días similares")
             return None, 0, []
         
         if usar_mediana:
             ganancia_hist = np.median(dias_similares)
         else:
             ganancia_hist = np.mean(dias_similares)
-        
-        print(f"   📊 Ganancias encontradas: {dias_similares}")
-        print(f"   📈 {'Mediana' if usar_mediana else 'Promedio'}: {ganancia_hist:.0f}%")
-        print(f"   📌 Total días similares: {len(dias_similares)}")
         
         return ganancia_hist, len(dias_similares), dias_similares_detalle
     
