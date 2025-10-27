@@ -1,12 +1,13 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time, timezone
 import json
 import os
 import sys
-import time
+import time as time_module
 from dotenv import load_dotenv
+import pytz
 
 # Importar funciones requeridas por Alberto
 try:
@@ -1779,77 +1780,70 @@ def main():
                 ultimo = df.iloc[-1]
                 anterior = df.iloc[-2]
                 
-                # VERIFICAR PRIMERA VELA ROJA (30 minutos de 9:30-10:00 AM)
+                # VERIFICAR PRIMERA VELA ROJA (9:30-10:00 AM ET)
                 fecha_analisis_str = fecha_seleccionada.strftime('%Y-%m-%d')
                 es_primera_vela_roja = False
                 hora_senal = None
                 
-                # OPCIÓN 1: Intentar con velas de 30 minutos
-                aggs_30min = client.get_aggs(
+                # Buscar CUALQUIER dato entre 9:30 y 10:00 AM ET
+                # Convertir a timestamp Unix para 9:30 y 10:00 AM ET
+                
+                et_tz = pytz.timezone('America/New_York')
+                fecha_et = et_tz.localize(datetime.combine(fecha_seleccionada, time(9, 30)))
+                inicio_930 = int(fecha_et.timestamp() * 1000)
+                fin_1000 = int((fecha_et + timedelta(minutes=30)).timestamp() * 1000)
+                
+                # Obtener TODOS los datos del día
+                aggs_dia = client.get_aggs(
                     ticker=ticker,
-                    multiplier=30,
+                    multiplier=1,
                     timespan="minute",
                     from_=fecha_analisis_str,
                     to=fecha_analisis_str,
-                    limit=20
+                    limit=1000
                 )
                 
-                if aggs_30min:
-                    # Encontrar la primera vela (la más temprana)
-                    primera_vela = min(aggs_30min, key=lambda x: x.timestamp)
-                    es_primera_vela_roja = primera_vela.close < primera_vela.open
+                if aggs_dia:
+                    # Filtrar solo datos entre 9:30-10:00 AM ET
+                    datos_930_1000 = [agg for agg in aggs_dia 
+                                     if inicio_930 <= agg.timestamp < fin_1000]
                     
-                    if es_primera_vela_roja:
-                        hora_senal = "9:30-10:00 AM ET"
-                        print(f"✅ {ticker}: 1VR detectada (vela 30min)")
-                else:
-                    # OPCIÓN 2: Si no hay de 30 min, usar minuto a minuto
-                    aggs_1min = client.get_aggs(
-                        ticker=ticker,
-                        multiplier=1,
-                        timespan="minute",
-                        from_=fecha_analisis_str,
-                        to=fecha_analisis_str,
-                        limit=100  # Suficientes para cubrir primeros 30 minutos
-                    )
-                    
-                    if aggs_1min and len(aggs_1min) >= 30:
-                        # Ordenar por timestamp para asegurar orden correcto
-                        aggs_1min_sorted = sorted(aggs_1min, key=lambda x: x.timestamp)
-                        # Tomar precio del primer minuto y minuto 30
-                        precio_apertura = aggs_1min_sorted[0].open
-                        precio_cierre_30min = aggs_1min_sorted[29].close if len(aggs_1min_sorted) > 29 else aggs_1min_sorted[-1].close
+                    if datos_930_1000:
+                        # Ordenar por tiempo
+                        datos_ordenados = sorted(datos_930_1000, key=lambda x: x.timestamp)
+                        precio_apertura = datos_ordenados[0].open
+                        precio_cierre = datos_ordenados[-1].close
                         
-                        es_primera_vela_roja = precio_cierre_30min < precio_apertura
+                        es_primera_vela_roja = precio_cierre < precio_apertura
                         
                         if es_primera_vela_roja:
+                            hora_inicio = datetime.fromtimestamp(datos_ordenados[0].timestamp/1000)
+                            hora_fin = datetime.fromtimestamp(datos_ordenados[-1].timestamp/1000)
                             hora_senal = "9:30-10:00 AM ET"
-                            print(f"✅ {ticker}: 1VR detectada (30 min construidos)")
+                            print(f"✅ {ticker}: 1VR detectada ({hora_inicio.strftime('%H:%M')}-{hora_fin.strftime('%H:%M')})")
+                        else:
+                            print(f"❌ {ticker}: NO es 1VR (${precio_apertura:.2f} → ${precio_cierre:.2f})")
                     else:
-                        # OPCIÓN 3: Si no hay suficientes datos de 1 min, intentar con 5 min
-                        aggs_5min = client.get_aggs(
-                            ticker=ticker,
-                            multiplier=5,
-                            timespan="minute",
-                            from_=fecha_analisis_str,
-                            to=fecha_analisis_str,
-                            limit=10
-                        )
-                        
-                        if aggs_5min and len(aggs_5min) >= 6:
-                            # 6 velas de 5 min = 30 minutos
-                            precio_apertura = aggs_5min[0].open
-                            precio_cierre_30min = aggs_5min[5].close
+                        # No hay datos entre 9:30-10:00, usar primera media hora disponible
+                        if len(aggs_dia) >= 30:
+                            datos_ordenados = sorted(aggs_dia, key=lambda x: x.timestamp)[:30]
+                            precio_apertura = datos_ordenados[0].open
+                            precio_cierre = datos_ordenados[-1].close
                             
-                            es_primera_vela_roja = precio_cierre_30min < precio_apertura
+                            es_primera_vela_roja = precio_cierre < precio_apertura
                             
                             if es_primera_vela_roja:
-                                hora_senal = "9:30-10:00 AM ET"
-                                print(f"✅ {ticker}: 1VR detectada (6x5min)")
+                                hora_inicio = datetime.fromtimestamp(datos_ordenados[0].timestamp/1000)
+                                hora_senal = f"Primera media hora desde {hora_inicio.strftime('%H:%M')}"
+                                print(f"✅ {ticker}: 1VR detectada (primera media hora disponible)")
+                            else:
+                                print(f"❌ {ticker}: NO es 1VR")
+                        else:
+                            print(f"❌ {ticker}: Sin datos suficientes")
+                            continue
                 
-                # Si no es vela roja, continuar con siguiente ticker
+                # Si no es vela roja, continuar
                 if not es_primera_vela_roja:
-                    print(f"❌ {ticker}: No es 1VR")
                     continue
                 
                 rsi_actual = ultimo['RSI'] if not pd.isna(ultimo['RSI']) else 50
