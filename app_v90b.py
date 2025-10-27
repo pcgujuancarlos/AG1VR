@@ -710,8 +710,16 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                     if primas_en_rango:
                         # Para cada prima en rango, calcular ganancia potencial
                         for prima_entrada in primas_en_rango[:3]:  # Máximo 3 por strike
+                            # Validar prima mínima
+                            if prima_entrada < 0.05:
+                                continue
+                                
                             # Calcular ganancia máxima posible
                             ganancia_maxima_pct = ((max_precio - prima_entrada) / prima_entrada * 100)
+                            
+                            # Filtrar ganancias irreales
+                            if ganancia_maxima_pct > 500:  # Más de 500% es muy sospechoso
+                                continue
                             
                             candidatos.append({
                                 'contrato': contrato,
@@ -824,14 +832,20 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
         except:
             prima_maxima_dia1 = prima_entrada
         
-        # Calcular ganancia día 1 con validaciones
-        if prima_entrada > 0 and prima_entrada < 50:  # Prima razonable
+        # Calcular ganancia día 1 con validaciones estrictas
+        if prima_entrada > 0.05 and prima_entrada < 50:  # Prima mínima $0.05
+            # Verificar que la prima máxima sea realista
+            if prima_maxima_dia1 / prima_entrada > 5:  # Más de 5x es sospechoso
+                print(f"⚠️ Prima máxima sospechosa: ${prima_entrada:.2f} → ${prima_maxima_dia1:.2f}")
+                prima_maxima_dia1 = prima_entrada * 3  # Limitar a 3x
+            
             ganancia_dia1 = ((prima_maxima_dia1 - prima_entrada) / prima_entrada * 100)
             # Validar que sea realista
-            if ganancia_dia1 > 400:
-                print(f"⚠️ Ganancia D1 irreal: {ganancia_dia1:.1f}% - limitando a 400%")
-                ganancia_dia1 = 400
+            if ganancia_dia1 > 200:  # Reducir límite a 200%
+                print(f"⚠️ Ganancia D1 irreal: {ganancia_dia1:.1f}% - limitando a 200%")
+                ganancia_dia1 = 200
         else:
+            print(f"⚠️ Prima entrada inválida: ${prima_entrada:.2f}")
             ganancia_dia1 = 0
         
         # Día 2
@@ -850,11 +864,16 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
             
             if option_aggs_dia2:
                 prima_maxima_dia2 = max([agg.high for agg in option_aggs_dia2])
-                if prima_entrada > 0 and prima_entrada < 50:
+                if prima_entrada > 0.05 and prima_entrada < 50:
+                    # Verificar que la prima máxima sea realista
+                    if prima_maxima_dia2 / prima_entrada > 5:  # Más de 5x es sospechoso
+                        print(f"⚠️ Prima máxima D2 sospechosa: ${prima_entrada:.2f} → ${prima_maxima_dia2:.2f}")
+                        prima_maxima_dia2 = prima_entrada * 3  # Limitar a 3x
+                    
                     ganancia_dia2 = ((prima_maxima_dia2 - prima_entrada) / prima_entrada * 100)
-                    if ganancia_dia2 > 400:
-                        print(f"⚠️ Ganancia D2 irreal: {ganancia_dia2:.1f}% - limitando a 400%")
-                        ganancia_dia2 = 400
+                    if ganancia_dia2 > 200:  # Reducir límite a 200%
+                        print(f"⚠️ Ganancia D2 irreal: {ganancia_dia2:.1f}% - limitando a 200%")
+                        ganancia_dia2 = 200
                 else:
                     ganancia_dia2 = 0
         except:
