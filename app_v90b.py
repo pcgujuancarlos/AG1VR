@@ -1728,7 +1728,8 @@ def main():
             status_text.text(f"Analizando {ticker}... ({idx + 1}/{total_tickers})")
             
             try:
-                aggs = client.get_aggs(
+                # Primero obtener datos diarios para RSI/BB
+                aggs_daily = client.get_aggs(
                     ticker=ticker,
                     multiplier=1,
                     timespan="day",
@@ -1737,11 +1738,11 @@ def main():
                     limit=30
                 )
                 
-                if not aggs:
+                if not aggs_daily:
                     continue
                 
                 data = []
-                for agg in aggs:
+                for agg in aggs_daily:
                     data.append({
                         'timestamp': pd.to_datetime(agg.timestamp, unit='ms'),
                         'open': agg.open,
@@ -1778,14 +1779,62 @@ def main():
                 ultimo = df.iloc[-1]
                 anterior = df.iloc[-2]
                 
-                # VERIFICAR PRIMERA VELA ROJA (roja después de verde)
-                es_vela_roja = ultimo['close'] < ultimo['open']  # Vela actual es roja
-                es_vela_verde_anterior = anterior['close'] > anterior['open']  # Vela anterior es verde
+                # VERIFICAR PRIMERA VELA DE 30 MINUTOS DEL DÍA
+                fecha_analisis_str = fecha_seleccionada.strftime('%Y-%m-%d')
                 
-                if not (es_vela_roja and es_vela_verde_anterior):
-                    continue
+                # Obtener las primeras velas del día para construir la vela de 30 min
+                # Intentar primero con 30 minutos directamente
+                aggs_30min = client.get_aggs(
+                    ticker=ticker,
+                    multiplier=30,
+                    timespan="minute",
+                    from_=fecha_analisis_str,
+                    to=fecha_analisis_str,
+                    limit=1  # Solo necesitamos la primera vela
+                )
                 
-                hora_senal = "10:00 AM ET"
+                # Si no hay datos de 30min, construir desde velas más pequeñas
+                if not aggs_30min:
+                    # Intentar con velas de 5 minutos
+                    aggs_5min = client.get_aggs(
+                        ticker=ticker,
+                        multiplier=5,
+                        timespan="minute",
+                        from_=fecha_analisis_str,
+                        to=fecha_analisis_str,
+                        limit=6  # Primeras 6 velas de 5min = 30 minutos
+                    )
+                    
+                    if aggs_5min and len(aggs_5min) >= 6:
+                        # Construir vela de 30min desde las 6 primeras de 5min
+                        open_30min = aggs_5min[0].open
+                        close_30min = aggs_5min[5].close
+                        es_primera_vela_roja = close_30min < open_30min
+                        
+                        if not es_primera_vela_roja:
+                            continue  # No es vela roja
+                            
+                        hora_senal = "9:30-10:00 AM ET"
+                    else:
+                        # Sin datos intradía suficientes, usar fallback
+                        es_vela_roja = ultimo['close'] < ultimo['open']
+                        es_vela_verde_anterior = anterior['close'] > anterior['open']
+                        if not (es_vela_roja and es_vela_verde_anterior):
+                            continue
+                        hora_senal = "Diario"
+                        es_primera_vela_roja = es_vela_roja and es_vela_verde_anterior
+                
+                elif aggs_30min:
+                    # Verificar si la primera vela de 30min es roja
+                    primera_vela_30min = aggs_30min[0]
+                    es_primera_vela_roja = primera_vela_30min.close < primera_vela_30min.open
+                    
+                    if not es_primera_vela_roja:
+                        continue  # La primera vela de 30min NO es roja
+                    
+                    # Es vela roja! Obtener hora
+                    timestamp = datetime.fromtimestamp(primera_vela_30min.timestamp/1000)
+                    hora_senal = f"9:30-10:00 AM ET"
                 
                 rsi_actual = ultimo['RSI'] if not pd.isna(ultimo['RSI']) else 50
                 bb_position_actual = ultimo['BB_Position'] if not pd.isna(ultimo['BB_Position']) else 0.5
