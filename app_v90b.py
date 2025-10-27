@@ -842,6 +842,17 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                 print(f"✅ Datos día 1: {len(option_aggs_dia1)} agregados")
                 print(f"   Rango de highs: ${min(todos_high_dia1):.2f} - ${max(todos_high_dia1):.2f}")
                 print(f"   Prima entrada final: ${prima_entrada:.2f}")
+                
+                # Debug: mostrar primeros y últimos datos
+                if len(option_aggs_dia1) > 0:
+                    print(f"\n   📊 Primeros datos del día:")
+                    for i, agg in enumerate(option_aggs_dia1[:3]):
+                        hora = datetime.fromtimestamp(agg.timestamp/1000).strftime('%H:%M')
+                        print(f"      {hora}: O=${agg.open:.2f} H=${agg.high:.2f} L=${agg.low:.2f} C=${agg.close:.2f}")
+                    print(f"   📊 Últimos datos del día:")
+                    for i, agg in enumerate(option_aggs_dia1[-3:]):
+                        hora = datetime.fromtimestamp(agg.timestamp/1000).strftime('%H:%M')
+                        print(f"      {hora}: O=${agg.open:.2f} H=${agg.high:.2f} L=${agg.low:.2f} C=${agg.close:.2f}")
             else:
                 print(f"⚠️ Sin datos para día 1")
         except Exception as e:
@@ -960,19 +971,29 @@ def generar_contratos_historicos_v2(ticker, fecha_vencimiento, precio_stock):
     fecha_str = fecha_vencimiento.strftime('%y%m%d')
     
     # Generar strikes desde 15% ITM hasta 5% OTM
-    strike_min = int(precio_stock * 0.85)
-    strike_max = int(precio_stock * 1.05)
+    strike_min = precio_stock * 0.85
+    strike_max = precio_stock * 1.05
     
-    # Step según ticker
+    # Step según ticker (ahora soporta decimales)
     if ticker in ['SPY', 'QQQ']:
-        step = 1
+        step = 1.0
     elif ticker in ['TSLA']:
-        step = 5
+        step = 5.0
+    elif ticker in ['BAC', 'F', 'GE']:  # Tickers que suelen tener strikes de 0.5
+        step = 0.5
     else:
-        step = 1 if precio_stock < 100 else 5
+        step = 1.0 if precio_stock < 100 else 5.0
     
-    for strike in range(strike_min, strike_max + 1, step):
-        option_ticker = f"O:{ticker}{fecha_str}P{strike*1000:08d}"
+    # Generar strikes con soporte para decimales
+    strikes = []
+    strike_actual = round(strike_min / step) * step
+    while strike_actual <= strike_max:
+        strikes.append(round(strike_actual, 1))  # Redondear a 1 decimal
+        strike_actual += step
+    
+    for strike in strikes:
+        strike_mult = int(strike * 1000)
+        option_ticker = f"O:{ticker}{fecha_str}P{strike_mult:08d}"
         
         contrato = {
             'ticker': option_ticker,
@@ -984,7 +1005,7 @@ def generar_contratos_historicos_v2(ticker, fecha_vencimiento, precio_stock):
         
         contratos.append(contrato)
     
-    print(f"✅ {len(contratos)} contratos generados (strikes ${strike_min}-${strike_max})")
+    print(f"✅ {len(contratos)} contratos generados (strikes ${strikes[0]:.1f}-${strikes[-1]:.1f}, step=${step})")
     return contratos
 
 
