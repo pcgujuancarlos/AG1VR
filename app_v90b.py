@@ -191,18 +191,9 @@ class AnalisisHistorico:
     def agregar_resultado(self, fecha, ticker, rsi, bb_position, ganancia_d1, ganancia_d2, prima_entrada, prima_max_d1, prima_max_d2, strike):
         """Agrega un resultado histórico verificando que sea válido"""
         
-        # VALIDACIONES CRÍTICAS
-        # 1. Validar que la prima esté en el rango configurado
-        if ticker in RANGOS_PRIMA:
-            rango = RANGOS_PRIMA[ticker]
-            if prima_entrada < rango['min'] * 0.8 or prima_entrada > rango['max'] * 1.5:
-                print(f"⚠️ Prima fuera de rango para {ticker}: ${prima_entrada:.2f} (rango: ${rango['min']:.2f}-${rango['max']:.2f})")
-                return  # NO guardar si está fuera de rango
+        # No aplicar filtros artificiales - usar datos reales
         
-        # 2. Validar ganancias realistas (máximo 400%)
-        if ganancia_d1 > 400 or ganancia_d2 > 400:
-            print(f"⚠️ Ganancia irreal detectada para {ticker}: D1={ganancia_d1}%, D2={ganancia_d2}%")
-            return  # NO guardar ganancias irreales
+        # No aplicar límites artificiales - calcular basado en datos reales
         
         # 3. Validar que no sea duplicado
         for r in self.resultados_historicos[-10:]:  # Revisar últimos 10
@@ -336,7 +327,7 @@ class AnalisisHistorico:
                     ganancia = resultado['ganancia_d1']
                     prima = resultado.get('prima_entrada', 0)
                     
-                    if ganancia > 0 and ganancia <= 400 and prima > 0.05:
+                    if ganancia > 0 and prima > 0.01:
                         dias_similares.append(ganancia)
                         dias_similares_detalle.append(resultado)
         
@@ -711,16 +702,12 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                     if primas_en_rango:
                         # Para cada prima en rango, calcular ganancia potencial
                         for prima_entrada in primas_en_rango[:3]:  # Máximo 3 por strike
-                            # Validar prima mínima
-                            if prima_entrada < 0.05:
+                            # No aplicar filtros artificiales - calcular basado en datos reales
+                            if prima_entrada < 0.01:
                                 continue
                                 
                             # Calcular ganancia máxima posible
                             ganancia_maxima_pct = ((max_precio - prima_entrada) / prima_entrada * 100)
-                            
-                            # Filtrar ganancias irreales
-                            if ganancia_maxima_pct > 500:  # Más de 500% es muy sospechoso
-                                continue
                             
                             candidatos.append({
                                 'contrato': contrato,
@@ -833,18 +820,10 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
         except:
             prima_maxima_dia1 = prima_entrada
         
-        # Calcular ganancia día 1 con validaciones estrictas
-        if prima_entrada > 0.05 and prima_entrada < 50:  # Prima mínima $0.05
-            # Verificar que la prima máxima sea realista
-            if prima_maxima_dia1 / prima_entrada > 5:  # Más de 5x es sospechoso
-                print(f"⚠️ Prima máxima sospechosa: ${prima_entrada:.2f} → ${prima_maxima_dia1:.2f}")
-                prima_maxima_dia1 = prima_entrada * 3  # Limitar a 3x
-            
+        # Calcular ganancia día 1 - SOLO CON DATOS REALES
+        if prima_entrada > 0.01:  # Prima mínima válida
             ganancia_dia1 = ((prima_maxima_dia1 - prima_entrada) / prima_entrada * 100)
-            # Validar que sea realista
-            if ganancia_dia1 > 200:  # Reducir límite a 200%
-                print(f"⚠️ Ganancia D1 irreal: {ganancia_dia1:.1f}% - limitando a 200%")
-                ganancia_dia1 = 200
+            print(f"📊 D1: Prima ${prima_entrada:.2f} → ${prima_maxima_dia1:.2f} = {ganancia_dia1:.1f}%")
         else:
             print(f"⚠️ Prima entrada inválida: ${prima_entrada:.2f}")
             ganancia_dia1 = 0
@@ -865,16 +844,9 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
             
             if option_aggs_dia2:
                 prima_maxima_dia2 = max([agg.high for agg in option_aggs_dia2])
-                if prima_entrada > 0.05 and prima_entrada < 50:
-                    # Verificar que la prima máxima sea realista
-                    if prima_maxima_dia2 / prima_entrada > 5:  # Más de 5x es sospechoso
-                        print(f"⚠️ Prima máxima D2 sospechosa: ${prima_entrada:.2f} → ${prima_maxima_dia2:.2f}")
-                        prima_maxima_dia2 = prima_entrada * 3  # Limitar a 3x
-                    
+                if prima_entrada > 0.01:
                     ganancia_dia2 = ((prima_maxima_dia2 - prima_entrada) / prima_entrada * 100)
-                    if ganancia_dia2 > 200:  # Reducir límite a 200%
-                        print(f"⚠️ Ganancia D2 irreal: {ganancia_dia2:.1f}% - limitando a 200%")
-                        ganancia_dia2 = 200
+                    print(f"📊 D2: Prima ${prima_entrada:.2f} → ${prima_maxima_dia2:.2f} = {ganancia_dia2:.1f}%")
                 else:
                     ganancia_dia2 = 0
         except:
@@ -1293,20 +1265,7 @@ def calcular_ganancia_real_opcion_OLD(client, ticker, fecha, precio_stock):
                     print(f"⚠️ AVISO: Usando prima fuera de límites: ${prima_entrada:.2f}")
                     print(f"⚠️ Rango esperado: ${rango['min']:.2f}-${rango['max']:.2f}")
                     
-                    # Si la prima está MUY lejos (más de 5x el rango máximo), rechazar
-                    if prima_entrada > rango['max'] * 5:
-                        print(f"❌ Prima demasiado cara: ${prima_entrada:.2f} > ${rango['max'] * 5:.2f} (5x máximo)")
-                        return {
-                            'ganancia_pct': 0,
-                            'ganancia_dia_siguiente': 0,
-                            'exito': '❌',
-                            'exito_dia2': '❌',
-                            'strike': strike_real,
-                            'prima_entrada': 0,
-                            'prima_maxima': 0,
-                            'prima_maxima_dia2': 0,
-                            'mensaje': f'Prima muy cara: ${prima_entrada:.2f} (máx: ${rango["max"]:.2f})'
-                        }
+                    # No aplicar límites artificiales - usar datos reales
             
             if prima_entrada is None or prima_entrada == 0:
                 print("❌ No se pudo determinar prima de entrada válida")
