@@ -686,63 +686,24 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                 )
                 
                 if option_aggs and len(option_aggs) > 0:
-                    # Analizar precios del día de forma más precisa
-                    precios_entrada = []  # Solo open y close para entrada realista
-                    todos_high = []       # Para calcular ganancia máxima
+                    # CÁLCULO SIMPLE Y DIRECTO
+                    prima_inicial = option_aggs[0].open  # Primer open del día
+                    prima_maxima = max([agg.high for agg in option_aggs])  # Máximo high del día
                     
-                    for agg in option_aggs:
-                        # Para entrada: solo considerar open y close (más realista)
-                        precios_entrada.extend([agg.open, agg.close])
-                        # Para ganancia máxima: usar high
-                        todos_high.append(agg.high)
-                    
-                    min_precio = min(precios_entrada) if precios_entrada else 0
-                    max_precio = max(todos_high) if todos_high else 0
-                    
-                    # Buscar primas de entrada en el rango objetivo
-                    primas_en_rango = [p for p in precios_entrada if rango['min'] <= p <= rango['max']]
-                    
-                    if primas_en_rango:
-                        # Para cada prima en rango, calcular ganancia potencial
-                        for prima_entrada in primas_en_rango[:3]:  # Máximo 3 por strike
-                            # No aplicar filtros artificiales - calcular basado en datos reales
-                            if prima_entrada < 0.01:
-                                continue
-                                
-                            # Calcular ganancia máxima posible
-                            ganancia_maxima_pct = ((max_precio - prima_entrada) / prima_entrada * 100)
-                            
-                            candidatos.append({
-                                'contrato': contrato,
-                                'prima_entrada': prima_entrada,
-                                'prima_maxima': max_precio,
-                                'ganancia_pct': ganancia_maxima_pct,
-                                'min_precio_dia': min_precio,
-                                'distancia_otm': distancia_pct
-                            })
-                            
-                            if len(candidatos) % 5 == 0:
-                                print(f"   Analizados {len(candidatos)} candidatos...")
-                    
-                    # También considerar el más cercano si no hay en rango exacto
-                    elif len(candidatos) < 5:  # Solo si tenemos pocos candidatos
-                        # Buscar el precio más cercano al rango
-                        rango_medio = (rango['min'] + rango['max']) / 2
-                        precio_mas_cercano = min(precios_entrada, key=lambda x: abs(x - rango_medio))
+                    # Solo considerar si la prima inicial está en un rango razonable
+                    if rango['min'] <= prima_inicial <= rango['max'] * 2:  # Permitir hasta 2x el rango
+                        ganancia_pct = ((prima_maxima - prima_inicial) / prima_inicial * 100) if prima_inicial > 0 else 0
                         
-                        # Solo considerar si está razonablemente cerca
-                        if abs(precio_mas_cercano - rango_medio) <= rango_medio * 0.5:
-                            ganancia_pct = ((max_precio - precio_mas_cercano) / precio_mas_cercano * 100)
-                            
-                            candidatos.append({
-                                'contrato': contrato,
-                                'prima_entrada': precio_mas_cercano,
-                                'prima_maxima': max_precio,
-                                'ganancia_pct': ganancia_pct,
-                                'min_precio_dia': min_precio,
-                                'distancia_otm': distancia_pct,
-                                'fuera_de_rango': True
-                            })
+                        candidatos.append({
+                            'contrato': contrato,
+                            'prima_entrada': prima_inicial,
+                            'prima_maxima': prima_maxima,
+                            'ganancia_pct': ganancia_pct,
+                            'distancia_otm': distancia_pct
+                        })
+                        
+                        if len(candidatos) % 10 == 0:
+                            print(f"   Analizados {len(candidatos)} candidatos...")
                             
             except Exception as e:
                 continue
@@ -764,21 +725,10 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
         # SELECCIONAR EL MEJOR: Mayor ganancia % con prima en rango preferentemente
         print(f"\n🎯 Encontrados {len(candidatos)} candidatos")
         
-        # Separar en rango vs fuera de rango
-        en_rango = [c for c in candidatos if not c.get('fuera_de_rango', False)]
-        fuera_rango = [c for c in candidatos if c.get('fuera_de_rango', False)]
-        
-        # Preferir los que están en rango
-        if en_rango:
-            # Ordenar por mayor ganancia %
-            en_rango.sort(key=lambda x: x['ganancia_pct'], reverse=True)
-            mejor = en_rango[0]
-            print(f"\n✅ MEJOR OPCIÓN (en rango):")
-        else:
-            # Si no hay en rango, usar el más cercano con mejor ganancia
-            fuera_rango.sort(key=lambda x: x['ganancia_pct'], reverse=True)
-            mejor = fuera_rango[0]
-            print(f"\n⚠️ MEJOR OPCIÓN (fuera de rango):")
+        # Ordenar por mayor ganancia % y seleccionar el mejor
+        candidatos.sort(key=lambda x: x['ganancia_pct'], reverse=True)
+        mejor = candidatos[0]
+        print(f"\n✅ MEJOR OPCIÓN:")
         
         print(f"   Strike: ${mejor['contrato']['strike_price']}")
         print(f"   Prima entrada: ${mejor['prima_entrada']:.2f}")
@@ -817,31 +767,22 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
             )
             
             if option_aggs_dia1 and len(option_aggs_dia1) > 0:
-                # Recalcular prima de entrada con TODOS los datos
-                precios_entrada_completos = []
-                todos_high_dia1 = []
+                # CÁLCULO SIMPLE Y DIRECTO
+                # Prima inicial = primer open del día
+                prima_inicial_real = option_aggs_dia1[0].open
                 
-                for agg in option_aggs_dia1:
-                    precios_entrada_completos.extend([agg.open, agg.close])
-                    todos_high_dia1.append(agg.high)
-                
-                # Buscar primas de entrada en rango con datos completos
-                if ticker in RANGOS_PRIMA:
-                    rango = RANGOS_PRIMA[ticker]
-                    primas_en_rango_completas = [p for p in precios_entrada_completos 
-                                                if rango['min'] <= p <= rango['max']]
-                    
-                    if primas_en_rango_completas:
-                        # Recalcular prima entrada con datos completos
-                        prima_entrada_original = prima_entrada
-                        prima_entrada = min(primas_en_rango_completas)  # Tomar la más conservadora
-                        if abs(prima_entrada - prima_entrada_original) > 0.05:
-                            print(f"⚠️ Ajustando prima entrada: ${prima_entrada_original:.2f} → ${prima_entrada:.2f}")
-                
+                # Prima máxima = máximo high de todo el día
+                todos_high_dia1 = [agg.high for agg in option_aggs_dia1]
                 prima_maxima_dia1 = max(todos_high_dia1)
+                
                 print(f"✅ Datos día 1: {len(option_aggs_dia1)} agregados")
-                print(f"   Rango de highs: ${min(todos_high_dia1):.2f} - ${max(todos_high_dia1):.2f}")
-                print(f"   Prima entrada final: ${prima_entrada:.2f}")
+                print(f"   Prima inicial (primer open): ${prima_inicial_real:.2f}")
+                print(f"   Prima máxima (max high): ${prima_maxima_dia1:.2f}")
+                
+                # Usar la prima inicial real si no tenemos prima de entrada previa
+                if prima_entrada <= 0 or prima_entrada > prima_maxima_dia1:
+                    prima_entrada = prima_inicial_real
+                    print(f"   Usando prima inicial como entrada: ${prima_entrada:.2f}")
                 
                 # Debug: mostrar primeros y últimos datos
                 if len(option_aggs_dia1) > 0:
