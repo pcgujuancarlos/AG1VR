@@ -686,44 +686,60 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                 )
                 
                 if option_aggs and len(option_aggs) > 0:
-                    # Buscar prima de entrada REALISTA en los primeros 30 minutos
-                    primeros_30_min = option_aggs[:30] if len(option_aggs) > 30 else option_aggs
+                    # IMPORTANTE: Prima de entrada se toma a las 10:00 AM ET
+                    import pytz
+                    from datetime import time, datetime as dt
                     
-                    # Recopilar precios de apertura de los primeros 30 minutos
-                    precios_apertura = []
-                    for agg in primeros_30_min:
-                        # Solo considerar precios que estén en un rango realista
-                        if agg.open > 0 and agg.volume > 0:  # Con volumen
-                            precios_apertura.append(agg.open)
+                    et_tz = pytz.timezone('America/New_York')
                     
-                    if precios_apertura:
-                        # Usar la mediana de los primeros 30 min como prima de entrada más realista
-                        import numpy as np
-                        prima_inicial = np.median(precios_apertura)
+                    # Buscar agregados cerca de las 10:00 AM ET
+                    prima_inicial = None
+                    for agg in option_aggs:
+                        hora_agg = dt.fromtimestamp(agg.timestamp/1000, tz=et_tz)
+                        # Buscar entre 9:59 y 10:01 AM ET
+                        if hora_agg.hour == 10 and hora_agg.minute <= 1:
+                            if agg.open > 0:
+                                prima_inicial = agg.open
+                                print(f"   Prima a las 10 AM: ${prima_inicial:.2f}")
+                                break
+                    
+                    # Si no hay datos exactos a las 10 AM, buscar el más cercano
+                    if prima_inicial is None:
+                        for agg in option_aggs:
+                            hora_agg = dt.fromtimestamp(agg.timestamp/1000, tz=et_tz)
+                            if hora_agg.hour == 9 and hora_agg.minute >= 55:
+                                if agg.open > 0:
+                                    prima_inicial = agg.open
+                                    print(f"   Prima cercana a las 10 AM ({hora_agg.strftime('%H:%M')}): ${prima_inicial:.2f}")
+                                    break
+                    
+                    if prima_inicial is None:
+                        continue  # Sin datos a las 10 AM, saltar este contrato
+                    
+                    # Prima máxima del día completo - usar percentil 75 para evitar outliers
+                    import numpy as np
+                    todos_high = [agg.high for agg in option_aggs if agg.high > 0]
+                    if todos_high:
+                        prima_maxima = np.percentile(todos_high, 75)  # Percentil 75 en lugar de max
+                    else:
+                        prima_maxima = prima_inicial
+                    
+                    # Solo considerar si está en rango razonable
+                    if rango['min'] <= prima_inicial <= rango['max'] * 2:
+                        ganancia_pct = ((prima_maxima - prima_inicial) / prima_inicial * 100) if prima_inicial > 0 else 0
                         
-                        # Prima máxima del día completo - usar percentil 75 para evitar outliers
-                        todos_high = [agg.high for agg in option_aggs if agg.high > 0]
-                        if todos_high:
-                            prima_maxima = np.percentile(todos_high, 75)  # Percentil 75 en lugar de max
-                        else:
-                            prima_maxima = prima_inicial
-                        
-                        # Solo considerar si está en rango razonable
-                        if rango['min'] <= prima_inicial <= rango['max'] * 2:
-                            ganancia_pct = ((prima_maxima - prima_inicial) / prima_inicial * 100) if prima_inicial > 0 else 0
-                            
-                            # Filtrar ganancias irreales (>300% es sospechoso)
-                            if ganancia_pct <= 300:
-                                candidatos.append({
-                                    'contrato': contrato,
-                                    'prima_entrada': prima_inicial,
-                                    'prima_maxima': prima_maxima,
-                                    'ganancia_pct': ganancia_pct,
-                                    'distancia_otm': distancia_pct
-                                })
-                        
-                        if len(candidatos) % 10 == 0:
-                            print(f"   Analizados {len(candidatos)} candidatos...")
+                        # Filtrar ganancias irreales (>300% es sospechoso)
+                        if ganancia_pct <= 300:
+                            candidatos.append({
+                                'contrato': contrato,
+                                'prima_entrada': prima_inicial,
+                                'prima_maxima': prima_maxima,
+                                'ganancia_pct': ganancia_pct,
+                                'distancia_otm': distancia_pct
+                            })
+                    
+                    if len(candidatos) % 10 == 0:
+                        print(f"   Analizados {len(candidatos)} candidatos...")
                             
             except Exception as e:
                 continue
@@ -787,24 +803,21 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
             )
             
             if option_aggs_dia1 and len(option_aggs_dia1) > 0:
-                # Buscar prima de entrada más realista
-                primeros_30_min = option_aggs_dia1[:30] if len(option_aggs_dia1) > 30 else option_aggs_dia1
+                # IMPORTANTE: Verificar prima a las 10 AM ET
+                import pytz
+                from datetime import datetime as dt
                 
-                # Recopilar precios con volumen de los primeros 30 minutos
-                precios_con_volumen = []
-                for agg in primeros_30_min:
-                    if agg.open > 0 and agg.volume > 0:
-                        precios_con_volumen.append(agg.open)
+                et_tz = pytz.timezone('America/New_York')
                 
-                if precios_con_volumen:
-                    # Usar mediana como precio de entrada más realista
-                    import numpy as np
-                    prima_entrada_recalculada = np.median(precios_con_volumen)
-                    
-                    # Si la prima previa es muy diferente, usar la recalculada
-                    if abs(prima_entrada - prima_entrada_recalculada) > prima_entrada * 0.2:
-                        print(f"⚠️ Ajustando prima entrada: ${prima_entrada:.2f} → ${prima_entrada_recalculada:.2f}")
-                        prima_entrada = prima_entrada_recalculada
+                # Si no tenemos prima válida, buscarla a las 10 AM
+                if prima_entrada <= 0:
+                    for agg in option_aggs_dia1:
+                        hora_agg = dt.fromtimestamp(agg.timestamp/1000, tz=et_tz)
+                        if hora_agg.hour == 10 and hora_agg.minute <= 1:
+                            if agg.open > 0:
+                                prima_entrada = agg.open
+                                print(f"✅ Prima entrada a las 10 AM: ${prima_entrada:.2f}")
+                                break
                 
                 # Prima máxima = percentil 95 de highs (evitar outliers)
                 todos_high_dia1 = [agg.high for agg in option_aggs_dia1 if agg.high > 0]
