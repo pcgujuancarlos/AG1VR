@@ -1823,6 +1823,12 @@ def main():
                     señal = "🚫 NO"
                     trade = "NO"
                 
+                # Validación adicional: RSI debe ser > 50 para considerar señal válida
+                if rsi_actual <= 50 and trade == "SI":
+                    señal = "🚫 NO"
+                    trade = "NO"
+                    print(f"⚠️ {ticker}: RSI muy bajo ({rsi_actual:.1f}), señal cancelada")
+                
                 # Calcular ganancia histórica con detalles
                 ganancia_hist, num_dias_similares, dias_similares_detalle = analisis.calcular_ganancia_historica(
                     ticker, 
