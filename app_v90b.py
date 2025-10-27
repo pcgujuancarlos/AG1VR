@@ -1759,10 +1759,11 @@ def main():
                 ultimo = df.iloc[-1]
                 anterior = df.iloc[-2]
                 
-                # VERIFICAR VELA ROJA
-                vela_roja = ultimo['close'] < anterior['close']
+                # VERIFICAR PRIMERA VELA ROJA (roja después de verde)
+                es_vela_roja = ultimo['close'] < ultimo['open']  # Vela actual es roja
+                es_vela_verde_anterior = anterior['close'] > anterior['open']  # Vela anterior es verde
                 
-                if not vela_roja:
+                if not (es_vela_roja and es_vela_verde_anterior):
                     continue
                 
                 hora_senal = "10:00 AM ET"
@@ -1770,24 +1771,26 @@ def main():
                 rsi_actual = ultimo['RSI'] if not pd.isna(ultimo['RSI']) else 50
                 bb_position_actual = ultimo['BB_Position'] if not pd.isna(ultimo['BB_Position']) else 0.5
                 
-                # Calcular probabilidad
-                prob_base = 65
+                # Calcular probabilidad (ajustada según feedback de Alberto)
+                # GLD Oct 23: RSI 62.6, BB 0.84 -> SÍ debe ser 1VR
+                # USO Oct 24: RSI 41.6, BB 0.40 -> NO debe ser 1VR
+                prob_base = 50  # Bajamos la base
                 
                 if rsi_actual > 70:
-                    prob_ajustada = prob_base + 20
+                    prob_ajustada = prob_base + 30
                 elif rsi_actual > 60:
-                    prob_ajustada = prob_base + 10
+                    prob_ajustada = prob_base + 20  # GLD con RSI 62 debe dar señal
                 elif rsi_actual > 50:
-                    prob_ajustada = prob_base
+                    prob_ajustada = prob_base + 10
                 else:
-                    prob_ajustada = prob_base - 15
+                    prob_ajustada = prob_base - 20  # USO con RSI 41 NO debe dar señal
                 
                 if bb_position_actual > 0.8:
-                    prob_ajustada += 15
+                    prob_ajustada += 20  # GLD con BB 0.84 debe sumar más
                 elif bb_position_actual > 0.6:
-                    prob_ajustada += 8
+                    prob_ajustada += 10
                 else:
-                    prob_ajustada -= 5
+                    prob_ajustada -= 10  # USO con BB 0.40 debe restar más
                 
                 probabilidad_final = max(0, min(100, prob_ajustada))
                 
