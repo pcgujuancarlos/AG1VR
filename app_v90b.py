@@ -1781,15 +1781,17 @@ def main():
                 
                 # VERIFICAR PRIMERA VELA ROJA (30 minutos de 9:30-10:00 AM)
                 fecha_analisis_str = fecha_seleccionada.strftime('%Y-%m-%d')
+                es_primera_vela_roja = False
+                hora_senal = None
                 
-                # Obtener velas de 30 minutos del día
+                # OPCIÓN 1: Intentar con velas de 30 minutos
                 aggs_30min = client.get_aggs(
                     ticker=ticker,
                     multiplier=30,
                     timespan="minute",
                     from_=fecha_analisis_str,
                     to=fecha_analisis_str,
-                    limit=20  # Traer varias para encontrar la primera
+                    limit=20
                 )
                 
                 if aggs_30min:
@@ -1797,13 +1799,57 @@ def main():
                     primera_vela = min(aggs_30min, key=lambda x: x.timestamp)
                     es_primera_vela_roja = primera_vela.close < primera_vela.open
                     
-                    if not es_primera_vela_roja:
-                        continue  # La primera vela NO es roja
-                    
-                    # Es vela roja!
-                    hora_senal = "9:30-10:00 AM ET"
+                    if es_primera_vela_roja:
+                        hora_senal = "9:30-10:00 AM ET"
+                        print(f"✅ {ticker}: 1VR detectada (vela 30min)")
                 else:
-                    # Sin datos de 30 min, NO dar señal
+                    # OPCIÓN 2: Si no hay de 30 min, usar minuto a minuto
+                    aggs_1min = client.get_aggs(
+                        ticker=ticker,
+                        multiplier=1,
+                        timespan="minute",
+                        from_=fecha_analisis_str,
+                        to=fecha_analisis_str,
+                        limit=100  # Suficientes para cubrir primeros 30 minutos
+                    )
+                    
+                    if aggs_1min and len(aggs_1min) >= 30:
+                        # Ordenar por timestamp para asegurar orden correcto
+                        aggs_1min_sorted = sorted(aggs_1min, key=lambda x: x.timestamp)
+                        # Tomar precio del primer minuto y minuto 30
+                        precio_apertura = aggs_1min_sorted[0].open
+                        precio_cierre_30min = aggs_1min_sorted[29].close if len(aggs_1min_sorted) > 29 else aggs_1min_sorted[-1].close
+                        
+                        es_primera_vela_roja = precio_cierre_30min < precio_apertura
+                        
+                        if es_primera_vela_roja:
+                            hora_senal = "9:30-10:00 AM ET"
+                            print(f"✅ {ticker}: 1VR detectada (30 min construidos)")
+                    else:
+                        # OPCIÓN 3: Si no hay suficientes datos de 1 min, intentar con 5 min
+                        aggs_5min = client.get_aggs(
+                            ticker=ticker,
+                            multiplier=5,
+                            timespan="minute",
+                            from_=fecha_analisis_str,
+                            to=fecha_analisis_str,
+                            limit=10
+                        )
+                        
+                        if aggs_5min and len(aggs_5min) >= 6:
+                            # 6 velas de 5 min = 30 minutos
+                            precio_apertura = aggs_5min[0].open
+                            precio_cierre_30min = aggs_5min[5].close
+                            
+                            es_primera_vela_roja = precio_cierre_30min < precio_apertura
+                            
+                            if es_primera_vela_roja:
+                                hora_senal = "9:30-10:00 AM ET"
+                                print(f"✅ {ticker}: 1VR detectada (6x5min)")
+                
+                # Si no es vela roja, continuar con siguiente ticker
+                if not es_primera_vela_roja:
+                    print(f"❌ {ticker}: No es 1VR")
                     continue
                 
                 rsi_actual = ultimo['RSI'] if not pd.isna(ultimo['RSI']) else 50
