@@ -675,12 +675,10 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                 break
             
             try:
-                # Obtener datos del día
-                multiplier = 1 if fecha.year < 2025 else 5
-                
+                # Obtener datos del día - usar agregados de 30 minutos para opciones
                 option_aggs = client.get_aggs(
                     ticker=option_ticker,
-                    multiplier=multiplier,
+                    multiplier=30,
                     timespan="minute",
                     from_=fecha_str,
                     to=fecha_str,
@@ -801,12 +799,10 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
         
         # Obtener prima máxima del día 1
         try:
-            # Usar 1 minuto para mejor precisión en datos históricos
-            multiplier = 1 if fecha.year < 2025 else 5
-            
+            # Usar agregados de 30 minutos para opciones (plan Starter)
             option_aggs_dia1 = client.get_aggs(
                 ticker=option_ticker,
-                multiplier=multiplier,
+                multiplier=30,
                 timespan="minute",
                 from_=fecha_str,
                 to=fecha_str,
@@ -835,7 +831,7 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
         try:
             option_aggs_dia2 = client.get_aggs(
                 ticker=option_ticker,
-                multiplier=multiplier,
+                multiplier=30,
                 timespan="minute",
                 from_=fecha_dia_siguiente_str,
                 to=fecha_dia_siguiente_str,
