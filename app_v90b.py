@@ -1816,13 +1816,8 @@ def main():
                             
                         hora_senal = "9:30-10:00 AM ET"
                     else:
-                        # Sin datos intradía suficientes, usar fallback
-                        es_vela_roja = ultimo['close'] < ultimo['open']
-                        es_vela_verde_anterior = anterior['close'] > anterior['open']
-                        if not (es_vela_roja and es_vela_verde_anterior):
-                            continue
-                        hora_senal = "Diario"
-                        es_primera_vela_roja = es_vela_roja and es_vela_verde_anterior
+                        # Sin datos intradía suficientes, NO dar señal
+                        continue  # No podemos verificar primera vela de 30 min
                 
                 elif aggs_30min:
                     # Verificar si la primera vela de 30min es roja
