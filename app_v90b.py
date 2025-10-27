@@ -803,8 +803,10 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
         print(f"   Prima de entrada: ${prima_entrada:.2f}")
         
         # Obtener prima máxima del día 1
+        prima_maxima_dia1 = prima_entrada  # Valor por defecto
         try:
             # Plan Developer - usar datos de 1 minuto para mayor precisión
+            print(f"\n🔍 Buscando datos del día 1: {fecha_str}")
             option_aggs_dia1 = client.get_aggs(
                 ticker=option_ticker,
                 multiplier=1,
@@ -814,12 +816,36 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                 limit=50000
             )
             
-            if option_aggs_dia1:
-                prima_maxima_dia1 = max([agg.high for agg in option_aggs_dia1])
+            if option_aggs_dia1 and len(option_aggs_dia1) > 0:
+                # Recalcular prima de entrada con TODOS los datos
+                precios_entrada_completos = []
+                todos_high_dia1 = []
+                
+                for agg in option_aggs_dia1:
+                    precios_entrada_completos.extend([agg.open, agg.close])
+                    todos_high_dia1.append(agg.high)
+                
+                # Buscar primas de entrada en rango con datos completos
+                if ticker in RANGOS_PRIMA:
+                    rango = RANGOS_PRIMA[ticker]
+                    primas_en_rango_completas = [p for p in precios_entrada_completos 
+                                                if rango['min'] <= p <= rango['max']]
+                    
+                    if primas_en_rango_completas:
+                        # Recalcular prima entrada con datos completos
+                        prima_entrada_original = prima_entrada
+                        prima_entrada = min(primas_en_rango_completas)  # Tomar la más conservadora
+                        if abs(prima_entrada - prima_entrada_original) > 0.05:
+                            print(f"⚠️ Ajustando prima entrada: ${prima_entrada_original:.2f} → ${prima_entrada:.2f}")
+                
+                prima_maxima_dia1 = max(todos_high_dia1)
+                print(f"✅ Datos día 1: {len(option_aggs_dia1)} agregados")
+                print(f"   Rango de highs: ${min(todos_high_dia1):.2f} - ${max(todos_high_dia1):.2f}")
+                print(f"   Prima entrada final: ${prima_entrada:.2f}")
             else:
-                prima_maxima_dia1 = prima_entrada
-        except:
-            prima_maxima_dia1 = prima_entrada
+                print(f"⚠️ Sin datos para día 1")
+        except Exception as e:
+            print(f"❌ Error obteniendo datos día 1: {str(e)}")
         
         # Calcular ganancia día 1 - SOLO CON DATOS REALES
         if prima_entrada > 0.01:  # Prima mínima válida
@@ -834,6 +860,7 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
         ganancia_dia2 = 0
         
         try:
+            print(f"\n🔍 Buscando datos del día 2: {fecha_dia_siguiente_str}")
             option_aggs_dia2 = client.get_aggs(
                 ticker=option_ticker,
                 multiplier=1,
@@ -843,15 +870,21 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                 limit=50000
             )
             
-            if option_aggs_dia2:
-                prima_maxima_dia2 = max([agg.high for agg in option_aggs_dia2])
+            if option_aggs_dia2 and len(option_aggs_dia2) > 0:
+                todos_high_dia2 = [agg.high for agg in option_aggs_dia2]
+                prima_maxima_dia2 = max(todos_high_dia2)
+                print(f"✅ Datos día 2: {len(option_aggs_dia2)} agregados")
+                print(f"   Rango de highs: ${min(todos_high_dia2):.2f} - ${max(todos_high_dia2):.2f}")
+                
                 if prima_entrada > 0.01:
                     ganancia_dia2 = ((prima_maxima_dia2 - prima_entrada) / prima_entrada * 100)
                     print(f"📊 D2: Prima ${prima_entrada:.2f} → ${prima_maxima_dia2:.2f} = {ganancia_dia2:.1f}%")
                 else:
                     ganancia_dia2 = 0
-        except:
-            pass
+            else:
+                print(f"⚠️ Sin datos para día 2")
+        except Exception as e:
+            print(f"❌ Error obteniendo datos día 2: {str(e)}")
         
         print(f"\n📊 RESULTADOS FINALES:")
         print(f"   Prima entrada: ${prima_entrada:.2f}")
