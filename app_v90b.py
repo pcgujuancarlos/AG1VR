@@ -1816,8 +1816,37 @@ def main():
                             
                         hora_senal = "9:30-10:00 AM ET"
                     else:
-                        # Sin datos intradía suficientes, NO dar señal
-                        continue  # No podemos verificar primera vela de 30 min
+                        # Sin datos intradía de 5min, buscar cualquier timeframe disponible
+                        # Intentar con 15 minutos
+                        aggs_15min = client.get_aggs(
+                            ticker=ticker,
+                            multiplier=15,
+                            timespan="minute",
+                            from_=fecha_analisis_str,
+                            to=fecha_analisis_str,
+                            limit=2  # Primeras 2 velas de 15min = 30 minutos
+                        )
+                        
+                        if aggs_15min and len(aggs_15min) >= 2:
+                            # Las primeras 2 velas de 15min cubren 9:30-10:00
+                            open_30min = aggs_15min[0].open
+                            close_30min = aggs_15min[1].close
+                            es_primera_vela_roja = close_30min < open_30min
+                            
+                            if not es_primera_vela_roja:
+                                continue
+                                
+                            hora_senal = "9:30-10:00 AM ET"
+                        else:
+                            # Último intento: usar lógica de vela roja diaria + RSI alto
+                            es_vela_roja = ultimo['close'] < ultimo['open']
+                            es_vela_verde_anterior = anterior['close'] > anterior['open']
+                            rsi_alto = ultimo['RSI'] > 60 if not pd.isna(ultimo['RSI']) else False
+                            
+                            if not (es_vela_roja and es_vela_verde_anterior and rsi_alto):
+                                continue
+                                
+                            hora_senal = "Diario (1VR)"
                 
                 elif aggs_30min:
                     # Verificar si la primera vela de 30min es roja
