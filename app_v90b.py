@@ -686,21 +686,41 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                 )
                 
                 if option_aggs and len(option_aggs) > 0:
-                    # CÁLCULO SIMPLE Y DIRECTO
-                    prima_inicial = option_aggs[0].open  # Primer open del día
-                    prima_maxima = max([agg.high for agg in option_aggs])  # Máximo high del día
+                    # Buscar prima de entrada REALISTA en los primeros 30 minutos
+                    primeros_30_min = option_aggs[:30] if len(option_aggs) > 30 else option_aggs
                     
-                    # Solo considerar si la prima inicial está en un rango razonable
-                    if rango['min'] <= prima_inicial <= rango['max'] * 2:  # Permitir hasta 2x el rango
-                        ganancia_pct = ((prima_maxima - prima_inicial) / prima_inicial * 100) if prima_inicial > 0 else 0
+                    # Recopilar precios de apertura de los primeros 30 minutos
+                    precios_apertura = []
+                    for agg in primeros_30_min:
+                        # Solo considerar precios que estén en un rango realista
+                        if agg.open > 0 and agg.volume > 0:  # Con volumen
+                            precios_apertura.append(agg.open)
+                    
+                    if precios_apertura:
+                        # Usar la mediana de los primeros 30 min como prima de entrada más realista
+                        import numpy as np
+                        prima_inicial = np.median(precios_apertura)
                         
-                        candidatos.append({
-                            'contrato': contrato,
-                            'prima_entrada': prima_inicial,
-                            'prima_maxima': prima_maxima,
-                            'ganancia_pct': ganancia_pct,
-                            'distancia_otm': distancia_pct
-                        })
+                        # Prima máxima del día completo - usar percentil 75 para evitar outliers
+                        todos_high = [agg.high for agg in option_aggs if agg.high > 0]
+                        if todos_high:
+                            prima_maxima = np.percentile(todos_high, 75)  # Percentil 75 en lugar de max
+                        else:
+                            prima_maxima = prima_inicial
+                        
+                        # Solo considerar si está en rango razonable
+                        if rango['min'] <= prima_inicial <= rango['max'] * 2:
+                            ganancia_pct = ((prima_maxima - prima_inicial) / prima_inicial * 100) if prima_inicial > 0 else 0
+                            
+                            # Filtrar ganancias irreales (>300% es sospechoso)
+                            if ganancia_pct <= 300:
+                                candidatos.append({
+                                    'contrato': contrato,
+                                    'prima_entrada': prima_inicial,
+                                    'prima_maxima': prima_maxima,
+                                    'ganancia_pct': ganancia_pct,
+                                    'distancia_otm': distancia_pct
+                                })
                         
                         if len(candidatos) % 10 == 0:
                             print(f"   Analizados {len(candidatos)} candidatos...")
@@ -767,22 +787,37 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
             )
             
             if option_aggs_dia1 and len(option_aggs_dia1) > 0:
-                # CÁLCULO SIMPLE Y DIRECTO
-                # Prima inicial = primer open del día
-                prima_inicial_real = option_aggs_dia1[0].open
+                # Buscar prima de entrada más realista
+                primeros_30_min = option_aggs_dia1[:30] if len(option_aggs_dia1) > 30 else option_aggs_dia1
                 
-                # Prima máxima = máximo high de todo el día
-                todos_high_dia1 = [agg.high for agg in option_aggs_dia1]
-                prima_maxima_dia1 = max(todos_high_dia1)
+                # Recopilar precios con volumen de los primeros 30 minutos
+                precios_con_volumen = []
+                for agg in primeros_30_min:
+                    if agg.open > 0 and agg.volume > 0:
+                        precios_con_volumen.append(agg.open)
+                
+                if precios_con_volumen:
+                    # Usar mediana como precio de entrada más realista
+                    import numpy as np
+                    prima_entrada_recalculada = np.median(precios_con_volumen)
+                    
+                    # Si la prima previa es muy diferente, usar la recalculada
+                    if abs(prima_entrada - prima_entrada_recalculada) > prima_entrada * 0.2:
+                        print(f"⚠️ Ajustando prima entrada: ${prima_entrada:.2f} → ${prima_entrada_recalculada:.2f}")
+                        prima_entrada = prima_entrada_recalculada
+                
+                # Prima máxima = percentil 95 de highs (evitar outliers)
+                todos_high_dia1 = [agg.high for agg in option_aggs_dia1 if agg.high > 0]
+                if todos_high_dia1:
+                    import numpy as np
+                    # Usar percentil 95 en lugar del máximo absoluto para evitar picos anormales
+                    prima_maxima_dia1 = np.percentile(todos_high_dia1, 95)
+                else:
+                    prima_maxima_dia1 = prima_entrada
                 
                 print(f"✅ Datos día 1: {len(option_aggs_dia1)} agregados")
-                print(f"   Prima inicial (primer open): ${prima_inicial_real:.2f}")
-                print(f"   Prima máxima (max high): ${prima_maxima_dia1:.2f}")
-                
-                # Usar la prima inicial real si no tenemos prima de entrada previa
-                if prima_entrada <= 0 or prima_entrada > prima_maxima_dia1:
-                    prima_entrada = prima_inicial_real
-                    print(f"   Usando prima inicial como entrada: ${prima_entrada:.2f}")
+                print(f"   Prima entrada (mediana 30min): ${prima_entrada:.2f}")
+                print(f"   Prima máxima (percentil 95): ${prima_maxima_dia1:.2f}")
                 
                 # Debug: mostrar primeros y últimos datos
                 if len(option_aggs_dia1) > 0:
