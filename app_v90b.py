@@ -28,19 +28,26 @@ def check_password():
         except:
             password_correcto = "Tomato4545@@"
         
-        if st.session_state["password"] == password_correcto:
+        # Verificar que la clave existe antes de acceder
+        if "password" in st.session_state and st.session_state["password"] == password_correcto:
             st.session_state["password_correct"] = True
             del st.session_state["password"]
         else:
             st.session_state["password_correct"] = False
 
+    # Inicializar session state si es necesario
     if "password_correct" not in st.session_state:
+        st.session_state["password_correct"] = False
+    
+    if not st.session_state.get("password_correct", False):
         st.text_input("🔐 Password", type="password", on_change=password_entered, key="password")
-        st.info("Introduce el password para acceder")
-        return False
-    elif not st.session_state["password_correct"]:
-        st.text_input("🔐 Password", type="password", on_change=password_entered, key="password")
-        st.error("😕 Password incorrecto")
+        if st.session_state.get("password_correct", False):
+            st.rerun()
+        else:
+            if "password" in st.session_state and st.session_state["password"]:
+                st.error("😕 Password incorrecto")
+            else:
+                st.info("Introduce el password para acceder")
         return False
     else:
         return True
