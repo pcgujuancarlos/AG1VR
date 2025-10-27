@@ -675,27 +675,32 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                 break
             
             try:
-                # Obtener datos del día - usar agregados de 30 minutos para opciones
+                # Obtener datos del día - plan Developer
                 option_aggs = client.get_aggs(
                     ticker=option_ticker,
-                    multiplier=30,
+                    multiplier=1,
                     timespan="minute",
                     from_=fecha_str,
                     to=fecha_str,
-                    limit=500
+                    limit=50000  # Obtener todos los datos del día
                 )
                 
                 if option_aggs and len(option_aggs) > 0:
-                    # Analizar todos los precios del día
-                    todos_precios = []
+                    # Analizar precios del día de forma más precisa
+                    precios_entrada = []  # Solo open y close para entrada realista
+                    todos_high = []       # Para calcular ganancia máxima
+                    
                     for agg in option_aggs:
-                        todos_precios.extend([agg.open, agg.high, agg.low, agg.close])
+                        # Para entrada: solo considerar open y close (más realista)
+                        precios_entrada.extend([agg.open, agg.close])
+                        # Para ganancia máxima: usar high
+                        todos_high.append(agg.high)
                     
-                    min_precio = min(todos_precios)
-                    max_precio = max(todos_precios)
+                    min_precio = min(precios_entrada) if precios_entrada else 0
+                    max_precio = max(todos_high) if todos_high else 0
                     
-                    # Buscar primas en el rango objetivo
-                    primas_en_rango = [p for p in todos_precios if rango['min'] <= p <= rango['max']]
+                    # Buscar primas de entrada en el rango objetivo
+                    primas_en_rango = [p for p in precios_entrada if rango['min'] <= p <= rango['max']]
                     
                     if primas_en_rango:
                         # Para cada prima en rango, calcular ganancia potencial
@@ -723,7 +728,7 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                     elif len(candidatos) < 5:  # Solo si tenemos pocos candidatos
                         # Buscar el precio más cercano al rango
                         rango_medio = (rango['min'] + rango['max']) / 2
-                        precio_mas_cercano = min(todos_precios, key=lambda x: abs(x - rango_medio))
+                        precio_mas_cercano = min(precios_entrada, key=lambda x: abs(x - rango_medio))
                         
                         # Solo considerar si está razonablemente cerca
                         if abs(precio_mas_cercano - rango_medio) <= rango_medio * 0.5:
@@ -799,10 +804,10 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
         
         # Obtener prima máxima del día 1
         try:
-            # Usar agregados de 30 minutos para opciones (plan Starter)
+            # Plan Developer - usar datos de 1 minuto para mayor precisión
             option_aggs_dia1 = client.get_aggs(
                 ticker=option_ticker,
-                multiplier=30,
+                multiplier=1,
                 timespan="minute",
                 from_=fecha_str,
                 to=fecha_str,
@@ -831,7 +836,7 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
         try:
             option_aggs_dia2 = client.get_aggs(
                 ticker=option_ticker,
-                multiplier=30,
+                multiplier=1,
                 timespan="minute",
                 from_=fecha_dia_siguiente_str,
                 to=fecha_dia_siguiente_str,
