@@ -1816,7 +1816,7 @@ def main():
                 if probabilidad_final >= threshold:
                     señal = "🎯 PUT"
                     trade = "SI"
-                elif probabilidad_final >= 60:
+                elif probabilidad_final >= 65:  # Subir de 60 a 65 para ser más estricto
                     señal = "🟡 PUT"
                     trade = "SI"
                 else:
