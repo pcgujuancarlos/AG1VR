@@ -1849,6 +1849,9 @@ def main():
                 if not es_primera_vela_roja:
                     continue
                 
+                # IMPORTANTE: Si es vela roja, SIEMPRE mostrarla
+                # (Alberto quiere ver TODAS las velas rojas)
+                
                 rsi_actual = ultimo['RSI'] if not pd.isna(ultimo['RSI']) else 50
                 bb_position_actual = ultimo['BB_Position'] if not pd.isna(ultimo['BB_Position']) else 0.5
                 
@@ -1923,8 +1926,8 @@ def main():
                         strike=ganancia_real['strike']
                     )
                 
-                # SOLO agregar a resultados si tiene señal positiva (trade = SI)
-                if trade == "SI":
+                # SIEMPRE agregar si es vela roja (cambio para Alberto)
+                if es_primera_vela_roja:
                     if ganancia_hist is not None:
                         ganancia_hist_str = f"{int(ganancia_hist)}% ({num_dias_similares})"
                     else:
