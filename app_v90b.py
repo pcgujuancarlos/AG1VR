@@ -605,11 +605,11 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                 'ganancia_dia_siguiente': 0,
                 'exito': '❌',
                 'exito_dia2': '❌',
-                'strike': 0,
+                'strike': precio_stock,  # Mostrar precio del stock
                 'prima_entrada': 0,
                 'prima_maxima': 0,
                 'prima_maxima_dia2': 0,
-                'mensaje': 'Sin contratos disponibles'
+                'mensaje': f'Sin contratos PUT para {ticker}'
             }
         
         print(f"✅ Encontrados {len(contratos)} contratos PUT para analizar")
@@ -698,17 +698,19 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                         hora_agg = dt.fromtimestamp(agg.timestamp/1000, tz=et_tz)
                         # Buscar entre 9:59 y 10:01 AM ET
                         if hora_agg.hour == 10 and hora_agg.minute <= 1:
-                            if agg.open > 0:
+                            if agg.open > 0 and rango['min'] <= agg.open <= rango['max']:
                                 prima_inicial = agg.open
                                 print(f"   Prima a las 10 AM: ${prima_inicial:.2f}")
                                 break
                     
-                    # Si no hay datos exactos a las 10 AM, buscar el más cercano
+                    # Si no hay datos exactos a las 10 AM, buscar en ventana más amplia
                     if prima_inicial is None:
                         for agg in option_aggs:
                             hora_agg = dt.fromtimestamp(agg.timestamp/1000, tz=et_tz)
-                            if hora_agg.hour == 9 and hora_agg.minute >= 55:
-                                if agg.open > 0:
+                            # Buscar entre 9:45 AM y 10:15 AM
+                            if ((hora_agg.hour == 9 and hora_agg.minute >= 45) or 
+                                (hora_agg.hour == 10 and hora_agg.minute <= 15)):
+                                if agg.open > 0 and rango['min'] <= agg.open <= rango['max']:
                                     prima_inicial = agg.open
                                     print(f"   Prima cercana a las 10 AM ({hora_agg.strftime('%H:%M')}): ${prima_inicial:.2f}")
                                     break
@@ -724,8 +726,8 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                     else:
                         prima_maxima = prima_inicial
                     
-                    # Solo considerar si está en rango razonable
-                    if rango['min'] <= prima_inicial <= rango['max'] * 2:
+                    # Solo considerar si está EXACTAMENTE en el rango configurado
+                    if rango['min'] <= prima_inicial <= rango['max']:
                         ganancia_pct = ((prima_maxima - prima_inicial) / prima_inicial * 100) if prima_inicial > 0 else 0
                         
                         # Filtrar ganancias irreales (>300% es sospechoso)
@@ -746,16 +748,17 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
         
         if not candidatos:
             print("❌ No se encontraron candidatos viables")
+            # Devolver valores más informativos cuando no hay datos
             return {
                 'ganancia_pct': 0,
                 'ganancia_dia_siguiente': 0,
                 'exito': '❌',
                 'exito_dia2': '❌',
-                'strike': 0,
+                'strike': precio_stock,  # Mostrar precio del stock en lugar de 0
                 'prima_entrada': 0,
                 'prima_maxima': 0,
                 'prima_maxima_dia2': 0,
-                'mensaje': 'Sin primas en rango'
+                'mensaje': f'Sin opciones con prima ${rango["min"]:.2f}-${rango["max"]:.2f} a las 10AM'
             }
         
         # SELECCIONAR EL MEJOR: Mayor ganancia % con prima en rango preferentemente
