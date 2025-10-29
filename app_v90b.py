@@ -810,14 +810,15 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                 
                 et_tz = pytz.timezone('America/New_York')
                 
-                # Si no tenemos prima válida, buscarla a las 10 AM
+                # Si no tenemos prima válida, buscarla a las 10 AM (con delay de 15 min)
                 if prima_entrada <= 0:
                     for agg in option_aggs_dia1:
                         hora_agg = dt.fromtimestamp(agg.timestamp/1000, tz=et_tz)
-                        if hora_agg.hour == 10 and hora_agg.minute <= 1:
+                        # Buscar timestamp 10:15-10:16 AM (datos reales de 10:00-10:01 AM)
+                        if hora_agg.hour == 10 and 15 <= hora_agg.minute <= 16:
                             if agg.open > 0:
                                 prima_entrada = agg.open
-                                print(f"✅ Prima entrada a las 10 AM: ${prima_entrada:.2f}")
+                                print(f"✅ Prima entrada a las 10 AM real (timestamp 10:15): ${prima_entrada:.2f}")
                                 break
                 
                 # Prima máxima = máximo real del día
