@@ -691,40 +691,21 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                     
                     et_tz = pytz.timezone('America/New_York')
                     
-                    # IMPORTANTE: Plan Developer tiene 15 min de delay
-                    # El timestamp de 10:15 AM contiene datos reales de las 10:00 AM
+                    # Buscar prima inicial en TODO el día que esté dentro del rango
                     prima_inicial = None
+                    hora_prima = None
+                    
+                    # Recorrer todos los datos del día buscando prima en el rango
                     for agg in option_aggs:
-                        hora_agg = dt.fromtimestamp(agg.timestamp/1000, tz=et_tz)
-                        # Buscar timestamp 10:15-10:16 AM (que tiene datos de 10:00-10:01 AM)
-                        if hora_agg.hour == 10 and 15 <= hora_agg.minute <= 16:
-                            if agg.open > 0 and rango['min'] <= agg.open <= rango['max']:
-                                prima_inicial = agg.open
-                                print(f"   Prima a las 10:00 AM real (timestamp 10:15): ${prima_inicial:.2f}")
-                                break
-                    
-                    # Si no hay datos exactos, buscar en ventana más amplia
-                    if prima_inicial is None:
-                        # Buscar entre 10:10-10:30 AM
-                        for agg in option_aggs:
+                        if agg.open > 0 and rango['min'] <= agg.open <= rango['max']:
+                            prima_inicial = agg.open
                             hora_agg = dt.fromtimestamp(agg.timestamp/1000, tz=et_tz)
-                            if hora_agg.hour == 10 and 10 <= hora_agg.minute <= 30:
-                                if agg.open > 0:  # Quitar restricción de rango temporalmente
-                                    prima_inicial = agg.open
-                                    print(f"   Prima cercana a 10 AM ({hora_agg.strftime('%H:%M')}): ${prima_inicial:.2f}")
-                                    break
-                    
-                    # Si aún no hay datos, usar primer dato con open > 0
-                    if prima_inicial is None:
-                        for agg in option_aggs[:30]:  # Primeros 30 minutos
-                            if agg.open > 0:
-                                prima_inicial = agg.open
-                                hora_agg = dt.fromtimestamp(agg.timestamp/1000, tz=et_tz)
-                                print(f"   Prima usando primer dato disponible ({hora_agg.strftime('%H:%M')}): ${prima_inicial:.2f}")
-                                break
+                            hora_prima = hora_agg.strftime('%H:%M')
+                            print(f"   Prima inicial encontrada a las {hora_prima}: ${prima_inicial:.2f}")
+                            break
                     
                     if prima_inicial is None or prima_inicial <= 0:
-                        continue  # Sin datos válidos, saltar este contrato
+                        continue  # No hay prima en el rango configurado
                     
                     # Prima máxima del día completo - usar el máximo real
                     todos_high = [agg.high for agg in option_aggs if agg.high > 0]
