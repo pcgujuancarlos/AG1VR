@@ -1793,9 +1793,8 @@ def main():
                 
                 et_tz = pytz.timezone('America/New_York')
                 fecha_et = et_tz.localize(datetime.combine(fecha_seleccionada, time(9, 30)))
-                # AJUSTE POR DELAY: Buscar timestamps 15 min después
-                inicio_945 = int((fecha_et + timedelta(minutes=15)).timestamp() * 1000)  # 9:45 timestamp = 9:30 real
-                fin_1015 = int((fecha_et + timedelta(minutes=45)).timestamp() * 1000)   # 10:15 timestamp = 10:00 real
+                inicio_930 = int(fecha_et.timestamp() * 1000)
+                fin_1000 = int((fecha_et + timedelta(minutes=30)).timestamp() * 1000)
                 
                 # Obtener TODOS los datos del día
                 aggs_dia = client.get_aggs(
@@ -1808,9 +1807,9 @@ def main():
                 )
                 
                 if aggs_dia:
-                    # Filtrar datos con delay de 15 min (9:45-10:15 timestamp = 9:30-10:00 real)
+                    # Filtrar solo datos entre 9:30-10:00 AM ET
                     datos_930_1000 = [agg for agg in aggs_dia 
-                                     if inicio_945 <= agg.timestamp < fin_1015]
+                                     if inicio_930 <= agg.timestamp < fin_1000]
                     
                     if datos_930_1000:
                         # Ordenar por tiempo
