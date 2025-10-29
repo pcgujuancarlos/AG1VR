@@ -271,11 +271,10 @@ class AnalisisHistorico:
                 print(f"   ❌ No se encontraron días similares para {ticker}")
                 return None, 0, []
             
-            # Filtrar ganancias irreales
+            # No filtrar ganancias - usar datos reales
             cohort = cohort[
                 (cohort['ganancia_d1'] > 0) & 
-                (cohort['ganancia_d1'] <= 400) &
-                (cohort['prima_entrada'] > 0.05)
+                (cohort['prima_entrada'] > 0.01)  # Solo filtrar primas muy pequeñas
             ]
             
             if cohort.empty:
@@ -692,37 +691,37 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                     
                     et_tz = pytz.timezone('America/New_York')
                     
-                    # Buscar agregados cerca de las 10:00 AM ET
+                    # IMPORTANTE: Plan Developer tiene 15 min de delay
+                    # El timestamp de 10:15 AM contiene datos reales de las 10:00 AM
                     prima_inicial = None
                     for agg in option_aggs:
                         hora_agg = dt.fromtimestamp(agg.timestamp/1000, tz=et_tz)
-                        # Buscar entre 9:59 y 10:01 AM ET
-                        if hora_agg.hour == 10 and hora_agg.minute <= 1:
+                        # Buscar timestamp 10:15-10:16 AM (que tiene datos de 10:00-10:01 AM)
+                        if hora_agg.hour == 10 and 15 <= hora_agg.minute <= 16:
                             if agg.open > 0 and rango['min'] <= agg.open <= rango['max']:
                                 prima_inicial = agg.open
-                                print(f"   Prima a las 10 AM: ${prima_inicial:.2f}")
+                                print(f"   Prima a las 10:00 AM real (timestamp 10:15): ${prima_inicial:.2f}")
                                 break
                     
-                    # Si no hay datos exactos a las 10 AM, buscar en ventana más amplia
+                    # Si no hay datos exactos, buscar en ventana más amplia (con delay)
                     if prima_inicial is None:
                         for agg in option_aggs:
                             hora_agg = dt.fromtimestamp(agg.timestamp/1000, tz=et_tz)
-                            # Buscar entre 9:45 AM y 10:15 AM
-                            if ((hora_agg.hour == 9 and hora_agg.minute >= 45) or 
-                                (hora_agg.hour == 10 and hora_agg.minute <= 15)):
+                            # Ventana ampliada: 10:00-10:30 AM (datos reales de 9:45-10:15 AM)
+                            if hora_agg.hour == 10 and hora_agg.minute <= 30:
                                 if agg.open > 0 and rango['min'] <= agg.open <= rango['max']:
                                     prima_inicial = agg.open
-                                    print(f"   Prima cercana a las 10 AM ({hora_agg.strftime('%H:%M')}): ${prima_inicial:.2f}")
+                                    hora_real = hora_agg.minute - 15  # Restar 15 min para hora real
+                                    print(f"   Prima cercana a 10 AM (real ~9:{45+hora_real} AM): ${prima_inicial:.2f}")
                                     break
                     
                     if prima_inicial is None:
                         continue  # Sin datos a las 10 AM, saltar este contrato
                     
-                    # Prima máxima del día completo - usar percentil 75 para evitar outliers
-                    import numpy as np
+                    # Prima máxima del día completo - usar el máximo real
                     todos_high = [agg.high for agg in option_aggs if agg.high > 0]
                     if todos_high:
-                        prima_maxima = np.percentile(todos_high, 75)  # Percentil 75 en lugar de max
+                        prima_maxima = max(todos_high)  # Usar el máximo real, no percentil
                     else:
                         prima_maxima = prima_inicial
                     
@@ -730,15 +729,14 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                     if rango['min'] <= prima_inicial <= rango['max']:
                         ganancia_pct = ((prima_maxima - prima_inicial) / prima_inicial * 100) if prima_inicial > 0 else 0
                         
-                        # Filtrar ganancias irreales (>300% es sospechoso)
-                        if ganancia_pct <= 300:
-                            candidatos.append({
-                                'contrato': contrato,
-                                'prima_entrada': prima_inicial,
-                                'prima_maxima': prima_maxima,
-                                'ganancia_pct': ganancia_pct,
-                                'distancia_otm': distancia_pct
-                            })
+                        # No filtrar ganancias - usar datos reales
+                        candidatos.append({
+                            'contrato': contrato,
+                            'prima_entrada': prima_inicial,
+                            'prima_maxima': prima_maxima,
+                            'ganancia_pct': ganancia_pct,
+                            'distancia_otm': distancia_pct
+                        })
                     
                     if len(candidatos) % 10 == 0:
                         print(f"   Analizados {len(candidatos)} candidatos...")
@@ -822,18 +820,17 @@ def calcular_ganancia_real_opcion(client, ticker, fecha, precio_stock):
                                 print(f"✅ Prima entrada a las 10 AM: ${prima_entrada:.2f}")
                                 break
                 
-                # Prima máxima = percentil 95 de highs (evitar outliers)
+                # Prima máxima = máximo real del día
                 todos_high_dia1 = [agg.high for agg in option_aggs_dia1 if agg.high > 0]
                 if todos_high_dia1:
-                    import numpy as np
-                    # Usar percentil 95 en lugar del máximo absoluto para evitar picos anormales
-                    prima_maxima_dia1 = np.percentile(todos_high_dia1, 95)
+                    # Usar el máximo real, no percentiles
+                    prima_maxima_dia1 = max(todos_high_dia1)
                 else:
                     prima_maxima_dia1 = prima_entrada
                 
                 print(f"✅ Datos día 1: {len(option_aggs_dia1)} agregados")
                 print(f"   Prima entrada (mediana 30min): ${prima_entrada:.2f}")
-                print(f"   Prima máxima (percentil 95): ${prima_maxima_dia1:.2f}")
+                print(f"   Prima máxima real: ${prima_maxima_dia1:.2f}")
                 
                 # Debug: mostrar primeros y últimos datos
                 if len(option_aggs_dia1) > 0:
@@ -1796,8 +1793,9 @@ def main():
                 
                 et_tz = pytz.timezone('America/New_York')
                 fecha_et = et_tz.localize(datetime.combine(fecha_seleccionada, time(9, 30)))
-                inicio_930 = int(fecha_et.timestamp() * 1000)
-                fin_1000 = int((fecha_et + timedelta(minutes=30)).timestamp() * 1000)
+                # AJUSTE POR DELAY: Buscar timestamps 15 min después
+                inicio_945 = int((fecha_et + timedelta(minutes=15)).timestamp() * 1000)  # 9:45 timestamp = 9:30 real
+                fin_1015 = int((fecha_et + timedelta(minutes=45)).timestamp() * 1000)   # 10:15 timestamp = 10:00 real
                 
                 # Obtener TODOS los datos del día
                 aggs_dia = client.get_aggs(
@@ -1810,9 +1808,9 @@ def main():
                 )
                 
                 if aggs_dia:
-                    # Filtrar solo datos entre 9:30-10:00 AM ET
+                    # Filtrar datos con delay de 15 min (9:45-10:15 timestamp = 9:30-10:00 real)
                     datos_930_1000 = [agg for agg in aggs_dia 
-                                     if inicio_930 <= agg.timestamp < fin_1000]
+                                     if inicio_945 <= agg.timestamp < fin_1015]
                     
                     if datos_930_1000:
                         # Ordenar por tiempo

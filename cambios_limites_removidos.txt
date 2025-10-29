@@ -1,0 +1,40 @@
+CAMBIOS REALIZADOS PARA ELIMINAR LÍMITES ARTIFICIALES
+=====================================================
+
+Según la instrucción del usuario: "No consiste en poner restricciones si no en que calcule 
+segun la prima inicial y segun la prima maxima del dia 1 y dia 2"
+
+CAMBIOS EN app_v90b.py:
+----------------------
+
+1. Línea ~726: 
+   ANTES: prima_maxima = np.percentile(todos_high, 75)  # Percentil 75
+   AHORA: prima_maxima = max(todos_high)  # Máximo real
+
+2. Línea ~735:
+   ANTES: if ganancia_pct <= 300:  # Filtrar ganancias >300%
+   AHORA: [ELIMINADO - ahora agrega todos los candidatos sin filtro]
+
+3. Línea ~829:
+   ANTES: prima_maxima_dia1 = np.percentile(todos_high_dia1, 95)  # Percentil 95
+   AHORA: prima_maxima_dia1 = max(todos_high_dia1)  # Máximo real
+
+4. Línea ~277:
+   ANTES: (cohort['ganancia_d1'] <= 400) &  # Filtrar ganancias >400%
+   AHORA: [ELIMINADO - solo verifica ganancia > 0]
+
+5. Línea ~278:
+   ANTES: (cohort['prima_entrada'] > 0.05)  # Prima mínima $0.05
+   AHORA: (cohort['prima_entrada'] > 0.01)  # Prima mínima $0.01
+
+RESULTADO:
+---------
+- El sistema ahora calcula ganancias basadas en DATOS REALES de Polygon
+- No hay límites artificiales en los porcentajes de ganancia
+- Se usan los valores máximos reales, no percentiles
+- Prima mínima reducida a $0.01 (solo para evitar división por cero)
+
+SCRIPT DE VERIFICACIÓN:
+----------------------
+- Creado test_ganancias_sin_limites.py para verificar los cálculos sin filtros
+- Este script muestra las ganancias REALES para CORZ, MSFT y BAC
